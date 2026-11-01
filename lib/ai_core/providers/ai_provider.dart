@@ -845,6 +845,11 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
   /// Last persisted state of the open chat, kept in memory so each turn
   /// appends to it rather than re-reading the file.
   SessionRecall? _recall;
+  Future<void> _pendingContext = Future<void>.value();
+
+  void _queueContext(Future<void> Function() remember) {
+    _pendingContext = _pendingContext.then((_) => remember());
+  }
 
   String? get openSessionId => _sessionId;
 
@@ -930,21 +935,23 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
             "mobile data on this device, and I'll use the connection on my own "
             'for pictures and look-ups.'
             '${earlier == null ? '' : ' Then ask me about **$earlier** again.'}';
-        thread.add(ChatMessage(
-          text: reply,
-          isUser: false,
-          stage: TutorStage.answer,
-        ));
-        unawaited(_noteExchange(message, reply, epoch, topic: earlier));
+        thread.add(
+          ChatMessage(text: reply, isUser: false, stage: TutorStage.answer),
+        );
+        _queueContext(
+          () => _noteExchange(message, reply, epoch, topic: earlier),
+        );
         await tokenCtrl.close();
         if (epoch != _epoch) return;
-        state = AsyncData(state.requireValue.copyWith(
-          messages: List<ChatMessage>.from(thread),
-          isGenerating: false,
-          streamingText: '',
-          clearError: true,
-          clearStreamingMath: true,
-        ));
+        state = AsyncData(
+          state.requireValue.copyWith(
+            messages: List<ChatMessage>.from(thread),
+            isGenerating: false,
+            streamingText: '',
+            clearError: true,
+            clearStreamingMath: true,
+          ),
+        );
         ref.read(tutorLastReplyProvider.notifier).state = DateTime.now();
         unawaited(recordTutorReply(ref));
         return;
@@ -972,21 +979,23 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
           clips,
           onlineAllowed: online || hub != null,
         );
-        thread.add(ChatMessage(
-          text: reply,
-          isUser: false,
-          stage: TutorStage.answer,
-        ));
-        unawaited(_noteExchange(message, reply, epoch, topic: clipSubject));
+        thread.add(
+          ChatMessage(text: reply, isUser: false, stage: TutorStage.answer),
+        );
+        _queueContext(
+          () => _noteExchange(message, reply, epoch, topic: clipSubject),
+        );
         await tokenCtrl.close();
         if (epoch != _epoch) return;
-        state = AsyncData(state.requireValue.copyWith(
-          messages: List<ChatMessage>.from(thread),
-          isGenerating: false,
-          streamingText: '',
-          clearError: true,
-          clearStreamingMath: true,
-        ));
+        state = AsyncData(
+          state.requireValue.copyWith(
+            messages: List<ChatMessage>.from(thread),
+            isGenerating: false,
+            streamingText: '',
+            clearError: true,
+            clearStreamingMath: true,
+          ),
+        );
         ref.read(tutorLastReplyProvider.notifier).state = DateTime.now();
         unawaited(recordTutorReply(ref));
         return;
@@ -1038,21 +1047,23 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
           onlineAllowed: ref.read(onlineTopicLookupEnabledProvider) || hub != null,
           from: fromHub ? 'the school library' : 'Wikipedia',
         );
-        thread.add(ChatMessage(
-          text: reply,
-          isUser: false,
-          stage: TutorStage.answer,
-        ));
-        unawaited(_noteExchange(message, reply, epoch, topic: pictureSubject));
+        thread.add(
+          ChatMessage(text: reply, isUser: false, stage: TutorStage.answer),
+        );
+        _queueContext(
+          () => _noteExchange(message, reply, epoch, topic: pictureSubject),
+        );
         await tokenCtrl.close();
         if (epoch != _epoch) return;
-        state = AsyncData(state.requireValue.copyWith(
-          messages: List<ChatMessage>.from(thread),
-          isGenerating: false,
-          streamingText: '',
-          clearError: true,
-          clearStreamingMath: true,
-        ));
+        state = AsyncData(
+          state.requireValue.copyWith(
+            messages: List<ChatMessage>.from(thread),
+            isGenerating: false,
+            streamingText: '',
+            clearError: true,
+            clearStreamingMath: true,
+          ),
+        );
         ref.read(tutorLastReplyProvider.notifier).state = DateTime.now();
         unawaited(recordTutorReply(ref));
         return;
@@ -1070,21 +1081,27 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
             'the online look-up, and the device may be offline. Ask your '
             'teacher, or try again when you are connected. I can help with any '
             'school subject in the meantime.';
-        thread.add(const ChatMessage(
-          text: reply,
-          isUser: false,
-          stage: TutorStage.answer,
-        ));
-        unawaited(_noteExchange(message, reply, epoch, topic: whoTopic(message)));
+        thread.add(
+          const ChatMessage(
+            text: reply,
+            isUser: false,
+            stage: TutorStage.answer,
+          ),
+        );
+        _queueContext(
+          () => _noteExchange(message, reply, epoch, topic: whoTopic(message)),
+        );
         await tokenCtrl.close();
         if (epoch != _epoch) return;
-        state = AsyncData(state.requireValue.copyWith(
-          messages: List<ChatMessage>.from(thread),
-          isGenerating: false,
-          streamingText: '',
-          clearError: true,
-          clearStreamingMath: true,
-        ));
+        state = AsyncData(
+          state.requireValue.copyWith(
+            messages: List<ChatMessage>.from(thread),
+            isGenerating: false,
+            streamingText: '',
+            clearError: true,
+            clearStreamingMath: true,
+          ),
+        );
         ref.read(tutorLastReplyProvider.notifier).state = DateTime.now();
         unawaited(recordTutorReply(ref));
         return;
@@ -1106,30 +1123,39 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
               message,
               history: [
                 for (final m in thread.take(thread.length - 1))
-                  if (!m.isError && !m.isRecap) (isUser: m.isUser, text: m.text),
+                  if (!m.isError)
+                    if (m.recap case final recap?)
+                      for (final e in recap.exchanges.reversed.take(6).toList().reversed)
+                        ...[(isUser: true, text: e.question), (isUser: false, text: e.answer)]
+                    else
+                      (isUser: m.isUser, text: m.text),
               ],
               lesson: local?.groundingNotes(message, max: 3000),
               onText: pushUi,
             );
       if (reply != null) {
-        thread.add(ChatMessage(
-          text: reply.text,
-          isUser: false,
-          stage: TutorStage.answer,
-          suggestions: reply.suggestions,
-        ));
+        thread.add(
+          ChatMessage(
+            text: reply.text,
+            isUser: false,
+            stage: TutorStage.answer,
+            suggestions: reply.suggestions,
+          ),
+        );
         await tokenCtrl.close();
         if (epoch != _epoch) return;
-        state = AsyncData(state.requireValue.copyWith(
-          messages: List<ChatMessage>.from(thread),
-          isGenerating: false,
-          streamingText: '',
-          clearError: true,
-          clearStreamingMath: true,
-        ));
+        state = AsyncData(
+          state.requireValue.copyWith(
+            messages: List<ChatMessage>.from(thread),
+            isGenerating: false,
+            streamingText: '',
+            clearError: true,
+            clearStreamingMath: true,
+          ),
+        );
         ref.read(tutorLastReplyProvider.notifier).state = DateTime.now();
         unawaited(recordTutorReply(ref));
-        unawaited(_saveOnlineTurn(message, reply.text, epoch));
+        _queueContext(() => _saveOnlineTurn(message, reply.text, epoch));
         return;
       }
       var topic = who ??
@@ -1155,31 +1181,37 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
         topic = await ref.read(onlineTopicLookupProvider).lookUp(message);
       }
       if (topic != null) {
-        thread[thread.length - 1] =
-            thread.last.copyWith(lesson: topic.asLesson());
+        thread[thread.length - 1] = thread.last.copyWith(
+          lesson: topic.asLesson(),
+        );
         final name = topic.title.isEmpty ? 'this topic' : topic.title;
-        thread.add(ChatMessage(
-          text: topic.fullText(),
-          isUser: false,
-          stage: TutorStage.answer,
-          suggestions: [
-            'Give me an example of $name',
-            'Explain $name more simply',
-            'Quiz me on $name',
-          ],
-        ));
+        thread.add(
+          ChatMessage(
+            text: topic.fullText(),
+            isUser: false,
+            stage: TutorStage.answer,
+            suggestions: [
+              'Give me an example of $name',
+              'Explain $name more simply',
+              'Quiz me on $name',
+            ],
+          ),
+        );
         await tokenCtrl.close();
         if (epoch != _epoch) return;
-        state = AsyncData(state.requireValue.copyWith(
-          messages: List<ChatMessage>.from(thread),
-          isGenerating: false,
-          streamingText: '',
-          clearError: true,
-          clearStreamingMath: true,
-        ));
+        state = AsyncData(
+          state.requireValue.copyWith(
+            messages: List<ChatMessage>.from(thread),
+            isGenerating: false,
+            streamingText: '',
+            clearError: true,
+            clearStreamingMath: true,
+          ),
+        );
         ref.read(tutorLastReplyProvider.notifier).state = DateTime.now();
         unawaited(recordTutorReply(ref));
-        unawaited(_handOverExplanation(topic, message, epoch));
+        final explained = topic;
+        _queueContext(() => _handOverExplanation(explained, message, epoch));
         return;
       }
     }
@@ -1239,17 +1271,21 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
       await tokenCtrl.close();
       if (discardIfStale()) return;
       thread.add(ChatMessage(text: support, isUser: false));
-      state = AsyncData(state.requireValue.copyWith(
-        messages: List<ChatMessage>.from(thread),
-        isGenerating: false,
-        streamingText: '',
-      ));
+      state = AsyncData(
+        state.requireValue.copyWith(
+          messages: List<ChatMessage>.from(thread),
+          isGenerating: false,
+          streamingText: '',
+        ),
+      );
       return;
     }
 
     try {
       final hasTranslator =
           cascade.translator != null && cascade.translator!.isAvailable;
+      await _pendingContext;
+      if (discardIfStale()) return;
       final turn = await cascade.completeTurn(
         userText: message,
         languageCode: lang,
@@ -1517,11 +1553,8 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
             updatedAt: now,
           );
 
-      // A topic switch mid-thread resets the tutor's memory internally
-      // (TutorPipeline._detectTopic), but the visible thread is continuous —
-      // so this stays one chat and keeps its original title. The memory
-      // snapshot is taken as-is, which is what makes reopening resume where
-      // the tutor actually is rather than where the chat began.
+      // Topic changes keep this conversation's history and original title.
+      // Persist the current grounding and memory together for reopening.
       final updated = base.withExchange(
         question: studentMessage,
         answer: reply,
@@ -1605,6 +1638,7 @@ class ChatNotifier extends AsyncNotifier<ChatState> {
     // was on screen.
     _sessionId = null;
     _recall = null;
+    _pendingContext = Future<void>.value();
     ref.read(chatInferencePipelineProvider).valueOrNull?.reset();
     ref.read(tutorPipelineProvider).valueOrNull?.reset();
     unawaited(

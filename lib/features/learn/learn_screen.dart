@@ -25,6 +25,7 @@ import '../../memory/session_recall.dart';
 import '../../voice/voice_locales.dart';
 import '../../voice/voice_provider.dart';
 import '../../voice/voice_service.dart';
+import '../../voice/speech_text.dart';
 import '../../services/pdf/diagram_detector.dart';
 import '../notes/note_pdf_screen.dart';
 import 'home_greeting.dart';
@@ -230,9 +231,9 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
         if (s.calc != null && s.calc!.isNotEmpty) b.writeln(s.calc);
       }
       b.write(entry.math!.answer);
-      return b.toString().trim();
+      return speechText(b.toString());
     }
-    return entry.text;
+    return speechText(entry.text);
   }
 
   @override

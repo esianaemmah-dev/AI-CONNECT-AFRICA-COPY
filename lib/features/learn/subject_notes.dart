@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../db/daos/topic_resource_dao.dart' show kRecordTopicPrefix;
 import '../../db/otic_database.dart';
+import '../../db/note_document_title.dart';
 import '../../db/providers/db_provider.dart';
 import '../../curriculum/curriculum_models.dart';
 import '../../curriculum/curriculum_provider.dart';
@@ -51,6 +52,7 @@ final learnerClassUuidProvider = FutureProvider.autoDispose<String?>((
 /// those received for their class — never another class's.
 final subjectNotesProvider = FutureProvider.autoDispose
     .family<List<SubjectNote>, String>((ref, subjectId) async {
+      ref.watch(noteResourcesRevisionProvider);
       final classUuid = await ref.watch(learnerClassUuidProvider.future);
       final db = ref.watch(dbProvider);
       final store = ref.watch(notePdfStoreProvider);
@@ -71,6 +73,7 @@ final subjectNotesProvider = FutureProvider.autoDispose
 /// this device's own, never another class's.
 final learnerNoteSubjectsProvider =
     FutureProvider.autoDispose<List<(String, String)>>((ref) async {
+      ref.watch(noteResourcesRevisionProvider);
       final classUuid = await ref.watch(learnerClassUuidProvider.future);
       final db = ref.watch(dbProvider);
       final ids = await db.topicResourceDao.subjectIdsWithNotes(
@@ -79,8 +82,7 @@ final learnerNoteSubjectsProvider =
       final byId = await ref.watch(subjectsByIdProvider.future);
       return [
         for (final id in ids) (id, byId[id]?.name ?? subjectNameFromId(id)),
-      ]
-        ..sort((a, b) => a.$2.toLowerCase().compareTo(b.$2.toLowerCase()));
+      ]..sort((a, b) => a.$2.toLowerCase().compareTo(b.$2.toLowerCase()));
     });
 
 /// How many notes (uploaded files) the active learner may read in each
@@ -88,6 +90,7 @@ final learnerNoteSubjectsProvider =
 final noteCountsProvider = FutureProvider.autoDispose<Map<String, int>>((
   ref,
 ) async {
+  ref.watch(noteResourcesRevisionProvider);
   final classUuid = await ref.watch(learnerClassUuidProvider.future);
   final rows = await ref
       .watch(dbProvider)
@@ -154,8 +157,7 @@ Future<List<SubjectNote>> buildSubjectNotes(
 /// belongs to: its title was "Document — Section". Without this, each
 /// section of one old upload showed as its own partial note.
 String legacyDocumentTitle(String resourceTitle) {
-  final cut = resourceTitle.lastIndexOf(' — ');
-  return cut > 0 ? resourceTitle.substring(0, cut) : resourceTitle;
+  return legacyNoteDocumentTitle(resourceTitle);
 }
 
 /// Chunk text with each `[DIAGRAM: …]` marker turned into a short line.

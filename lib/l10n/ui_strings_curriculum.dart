@@ -4,6 +4,7 @@
 const kUiStringsCurriculum = <String, Map<String, String>>{
   'sw': {
     'Use AI to answer this question': 'Tumia AI kujibu swali hili',
+    'Answer with AI': 'Tumia AI kujibu',
     'Hide Quiz': 'Ficha jaribio',
     'Test Yourself': 'Jijaribu',
     'Perfect!': 'Safi kabisa!',
@@ -29,6 +30,7 @@ const kUiStringsCurriculum = <String, Map<String, String>>{
   },
   'lg': {
     'Use AI to answer this question': 'Kozesa AI okuddamu ekibuuzo kino',
+    'Answer with AI': 'Ddamu ne AI',
     'Hide Quiz': 'Kweka ekigezo',
     'Test Yourself': 'Kebera',
     'Perfect!': 'Kituufu ddala!',
@@ -54,6 +56,7 @@ const kUiStringsCurriculum = <String, Map<String, String>>{
   },
   'rw': {
     'Use AI to answer this question': 'Koresha AI gusubiza iki kibazo',
+    'Answer with AI': 'Subiza ukoresheje AI',
     'Hide Quiz': 'Hisha ikizami',
     'Test Yourself': 'Igerageze',
     'Perfect!': 'Byuzuye!',
@@ -79,6 +82,7 @@ const kUiStringsCurriculum = <String, Map<String, String>>{
   },
   'rn': {
     'Use AI to answer this question': 'Koresha AI kugira usubize iki kibazo',
+    'Answer with AI': 'Subiza ukoresheje AI',
     'Hide Quiz': 'Hisha ikizami',
     'Test Yourself': 'Igerageze',
     'Perfect!': 'Vyuzuye!',
@@ -104,6 +108,7 @@ const kUiStringsCurriculum = <String, Map<String, String>>{
   },
   'ln': {
     'Use AI to answer this question': 'Salela AI koyanola motuna oyo',
+    'Answer with AI': 'Yanola na AI',
     'Hide Quiz': 'Bomba etyola',
     'Test Yourself': 'Meka yo moko',
     'Perfect!': 'Malamu mpenza!',
@@ -129,6 +134,7 @@ const kUiStringsCurriculum = <String, Map<String, String>>{
   },
   'so': {
     'Use AI to answer this question': 'Isticmaal AI si aad uga jawaabto su\'aashan',
+    'Answer with AI': 'Ku jawaab AI',
     'Hide Quiz': 'Qari imtixaanka',
     'Test Yourself': 'Is tijaabi',
     'Perfect!': 'Qumman!',

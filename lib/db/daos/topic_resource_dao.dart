@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../otic_database.dart';
+import '../note_document_title.dart';
 import '../tables/topic_resources_table.dart';
 
 part 'topic_resource_dao.g.dart';
@@ -182,7 +183,11 @@ class TopicResourceDao extends DatabaseAccessor<OticDatabase>
   }) {
     return (select(topicResources)
           ..where((t) => t.subjectId.equals(subjectId))
-          ..where((t) => t.documentTitle.equals(documentTitle))
+          ..where(
+            (t) => CustomExpression<String>(
+              noteDocumentTitleSql(),
+            ).equals(documentTitle),
+          )
           ..where((t) => t.classGroupUuid.isNull())
           ..where((t) => t.topicKey.like('$kRecordTopicPrefix%').not())
           ..orderBy([(t) => OrderingTerm.asc(t.id)]))
@@ -200,7 +205,11 @@ class TopicResourceDao extends DatabaseAccessor<OticDatabase>
   }) {
     final q = delete(topicResources)
       ..where((t) => t.subjectId.equals(subjectId))
-      ..where((t) => t.documentTitle.equals(documentTitle))
+      ..where(
+        (t) => CustomExpression<String>(
+          noteDocumentTitleSql(),
+        ).equals(documentTitle),
+      )
       ..where((t) => t.classGroupUuid.isNull())
       ..where((t) => t.topicKey.like('$kRecordTopicPrefix%').not());
     if (createdAfter != null) {
@@ -212,17 +221,14 @@ class TopicResourceDao extends DatabaseAccessor<OticDatabase>
   /// Every note written on this device that has text, as
   /// (subjectId, documentTitle).
   Future<List<(String, String)>> ownNotesWithText() async {
+    final document = CustomExpression<String>(noteDocumentTitleSql());
     final q = selectOnly(topicResources, distinct: true)
-      ..addColumns([topicResources.subjectId, topicResources.documentTitle])
+      ..addColumns([topicResources.subjectId, document])
       ..where(topicResources.classGroupUuid.isNull())
-      ..where(topicResources.documentTitle.isNotNull())
       ..where(topicResources.topicKey.like('$kRecordTopicPrefix%').not());
     return [
       for (final r in await q.get())
-        (
-          r.read(topicResources.subjectId)!,
-          r.read(topicResources.documentTitle)!,
-        ),
+        (r.read(topicResources.subjectId)!, r.read(document)!),
     ];
   }
 
@@ -362,14 +368,25 @@ class TopicResourceDao extends DatabaseAccessor<OticDatabase>
   Future<int> deleteByTitle(String title, {String? subjectId}) async {
     // Its class shares go with it, or a later note with the same title
     // would silently inherit them.
-    await customStatement(
-      'DELETE FROM resource_shares WHERE document_title = ?'
+    await customUpdate(
+      'DELETE FROM resource_shares WHERE (document_title = ? OR EXISTS ('
+      'SELECT 1 FROM topic_resources t WHERE t.subject_id = resource_shares.subject_id '
+      'AND t.resource_title = resource_shares.document_title '
+      'AND t.class_group_uuid IS NULL AND t.document_title IS NULL '
+      'AND ${noteDocumentTitleSql(alias: 't')} = ?))'
       '${subjectId == null ? '' : ' AND subject_id = ?'}',
-      [title, if (subjectId != null) subjectId],
+      variables: [
+        Variable.withString(title),
+        Variable.withString(title),
+        if (subjectId != null) Variable.withString(subjectId),
+      ],
+      updates: {attachedDatabase.resourceShares},
     );
     final q = delete(topicResources)
       ..where(
-        (t) => t.documentTitle.equals(title) | t.resourceTitle.equals(title),
+        (t) =>
+            CustomExpression<String>(noteDocumentTitleSql()).equals(title) |
+            t.resourceTitle.equals(title),
       )
       ..where((t) => t.classGroupUuid.isNull());
     if (subjectId != null) {
@@ -414,14 +431,15 @@ class TopicResourceDao extends DatabaseAccessor<OticDatabase>
       if (ownOnly) 'class_group_uuid IS NULL',
     ];
     final where = conditions.isEmpty ? '' : 'WHERE ${conditions.join(' AND ')}';
+    final document = noteDocumentTitleSql();
     final rows = await customSelect(
-      'SELECT COALESCE(document_title, resource_title) AS resource_title, '
+      'SELECT $document AS resource_title, '
       '       subject_id, MIN(topic_key) AS topic_key, MIN(term_marker) AS term_marker, '
       '       COUNT(*) AS chunk_count, MIN(created_at) AS created_at, '
       "       SUM(CASE WHEN topic_key LIKE '$kRecordTopicPrefix%' THEN 0 ELSE 1 END) AS text_count, "
       "       SUM(CASE WHEN topic_key = '$kQuizTopicKey' THEN 1 ELSE 0 END) AS quiz_count "
       'FROM topic_resources $where '
-      'GROUP BY COALESCE(document_title, resource_title), subject_id '
+      'GROUP BY $document, subject_id '
       'ORDER BY created_at DESC',
       variables: [if (subjectId != null) Variable.withString(subjectId)],
       readsFrom: {topicResources},

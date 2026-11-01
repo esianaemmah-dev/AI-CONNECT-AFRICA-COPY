@@ -32,6 +32,7 @@ class MyNotesSubject {
 final myNotesProvider = FutureProvider.autoDispose<List<MyNotesSubject>>((
   ref,
 ) async {
+  ref.watch(noteResourcesRevisionProvider);
   final readable = await ref.watch(readableNoteSubjectsProvider.future);
   final classUuid = await ref.watch(learnerClassUuidProvider.future);
   final subjects = await ref.watch(learnerNoteSubjectsProvider.future);

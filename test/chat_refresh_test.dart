@@ -73,6 +73,31 @@ void main() {
     addTearDown(container.dispose);
   });
 
+  test('a follow-up waits for a direct reply to enter tutor memory', () async {
+    final ready = Completer<TutorPipeline>();
+    final cascade = ChatInferencePipeline(reasoner: QwenReasoningService(engine), tutor: tutor);
+    final delayed = ProviderContainer(overrides: [
+      activeStudentProvider.overrideWith((ref) async => null),
+      chatInferencePipelineProvider.overrideWith((ref) async => cascade),
+      tutorPipelineProvider.overrideWith((ref) => ready.future),
+      engineLoadedProvider.overrideWith((ref) async => engine),
+      onlineTopicLookupEnabledProvider.overrideWith((ref) => OnlineTopicLookupSetting.fixed(false)),
+    ]);
+    addTearDown(delayed.dispose);
+    final notifier = delayed.read(chatProvider.notifier);
+    await delayed.read(chatProvider.future);
+    await notifier.send('go online');
+    final followUp = notifier.send('Why can you not do that?');
+    await pumpEventQueue();
+    expect(engine.prompts, isEmpty);
+    ready.complete(tutor);
+    await pumpEventQueue(times: 50);
+    expect(engine.prompts.single, contains('Student: go online'));
+    expect(engine.prompts.single, contains("I can't switch the internet on myself"));
+    engine.completeNext('Only you can turn on this device connection.');
+    await followUp;
+  });
+
   test('a refresh mid-turn discards the reply and its prompt memory',
       () async {
     final notifier = container.read(chatProvider.notifier);

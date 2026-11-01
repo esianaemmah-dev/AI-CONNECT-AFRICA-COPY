@@ -67,7 +67,7 @@ void main() {
   });
 
   test('older exchanges fold into DIGEST instead of vanishing', () {
-    final m = ConversationMemory();
+    final m = ConversationMemory(maxRawTurns: 4);
     m.remember(student: 'What is a cell?', tutor: 'Basic unit of life.');
     m.remember(student: 'What is DNA?', tutor: 'Genetic material.');
     m.remember(

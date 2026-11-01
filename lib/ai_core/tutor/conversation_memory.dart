@@ -11,7 +11,7 @@ import '../translate/follow_up_glossary.dart';
 /// - Always produce a bounded [promptBlock] even under adversarial growth
 class ConversationMemory {
   ConversationMemory({
-    this.maxRawTurns = 4,
+    this.maxRawTurns = 6,
     this.maxFacts = 6,
     this.turnClipChars = 180,
     this.factClipChars = 90,
@@ -60,6 +60,17 @@ class ConversationMemory {
       (lessonDigest == null || lessonDigest!.isEmpty);
 
   int get exchangeCount => turns.length ~/ 2;
+
+  /// A new subject changes grounding, not the conversation the learner sees.
+  void beginTopic(String topic) {
+    established.clear();
+    anchorQuestion = null;
+    activeTopic = topic.isEmpty ? null : _clip(topic, stateClipChars);
+    activeIntent = null;
+    activeSlots.clear();
+    activeEntities.clear();
+    unresolvedQuestions.clear();
+  }
 
   void clear() {
     turns.clear();
@@ -188,11 +199,17 @@ class ConversationMemory {
           ? turns.removeAt(0).text
           : '';
       final bit = tutor.isEmpty
-          ? 'Student asked about $student.'
-          : 'Student: $student → Tutor: $tutor';
+          ? 'Student asked: ${_clip(student, 90)}'
+          : 'Student: ${_clip(student, 90)} → Tutor: ${_clip(tutor, 110)}';
       final prev = lessonDigest?.trim();
-      final merged = (prev == null || prev.isEmpty) ? bit : '$prev | $bit';
-      lessonDigest = _clip(merged, digestClipChars);
+      final parts = [
+        if (prev != null && prev.isNotEmpty) ...prev.split(' | '),
+        bit,
+      ];
+      while (parts.length > 1 && parts.join(' | ').length > digestClipChars) {
+        parts.removeAt(0);
+      }
+      lessonDigest = _clip(parts.join(' | '), digestClipChars);
     }
     // Repair odd length if something went wrong — never ship broken THREAD.
     if (turns.length.isOdd) {
@@ -252,6 +269,16 @@ class ConversationMemory {
     if (t.isEmpty) return false;
 
     if (_continuingPhrases.contains(t)) return true;
+    if (RegExp(
+          r'\b(earlier|previous|above|second|third|former|latter)\b',
+        ).hasMatch(t) ||
+        RegExp(r'\b(it|its|this|that|they|them|these|those)\b').hasMatch(t) ||
+        t.startsWith('compare ') ||
+        t.startsWith('instead ') ||
+        t.startsWith('make it ') ||
+        t.startsWith('use the ')) {
+      return true;
+    }
     if (t.startsWith('what about') ||
         t.startsWith('and then') ||
         t.startsWith('tell me more') ||
@@ -449,6 +476,7 @@ class ConversationMemory {
 
   String _promptBlockUnsafe({int? maxChars}) {
     if (isEmpty) return '';
+    if (maxChars != null && maxChars <= 2) return '';
 
     final digest = lessonDigest?.trim();
     var threadLines = [
@@ -524,21 +552,24 @@ class ConversationMemory {
     block = build(dig: digest, lines: threadLines, factLines: facts);
     if (block.length <= maxChars) return block;
 
-    // 1) Drop digest.
-    block = build(dig: null, lines: threadLines, factLines: facts);
+    // Compress each recent message before dropping whole exchanges. Keep a
+    // small rolling digest so a topic change doesn't hide all earlier asks.
+    final compactDigest = digest == null ? null : _clip(digest, 150);
+    threadLines = [for (final line in threadLines) _clip(line, 90)];
+    block = build(dig: compactDigest, lines: threadLines, factLines: facts);
     if (block.length <= maxChars) return block;
 
     // 2) Drop oldest THREAD pairs until one exchange remains.
     while (threadLines.length > 2 && block.length > maxChars) {
       threadLines = threadLines.sublist(threadLines.length >= 2 ? 2 : 1);
-      block = build(dig: null, lines: threadLines, factLines: facts);
+      block = build(dig: compactDigest, lines: threadLines, factLines: facts);
     }
     if (block.length <= maxChars) return block;
 
     // 3) Drop facts from the oldest.
     while (facts.isNotEmpty && block.length > maxChars) {
       facts = facts.sublist(1);
-      block = build(dig: null, lines: threadLines, factLines: facts);
+      block = build(dig: compactDigest, lines: threadLines, factLines: facts);
     }
     if (block.length <= maxChars) return block;
 
