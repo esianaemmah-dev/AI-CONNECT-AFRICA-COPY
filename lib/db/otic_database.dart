@@ -151,10 +151,21 @@ class OticDatabase extends _$OticDatabase {
       if (from < 2) {
         await m.createTable(learningPaths);
       }
+      // Steps 2–8 are guarded too (createTable is already IF NOT EXISTS):
+      // a build from schema 7 or older that opens a newer database stamps
+      // user_version back down to its own number, so the next current
+      // build re-runs every step on a database that already has it all.
       if (from < 3) {
-        await m.addColumn(students, students.streakDays);
-        await m.addColumn(students, students.lastStreakDate);
-        await m.addColumn(students, students.totalPoints);
+        for (final (col, add) in [
+          ('streak_days', () => m.addColumn(students, students.streakDays)),
+          (
+            'last_streak_date',
+            () => m.addColumn(students, students.lastStreakDate),
+          ),
+          ('total_points', () => m.addColumn(students, students.totalPoints)),
+        ]) {
+          if (!await _columnExists('students', col)) await add();
+        }
         await m.createTable(earnedBadges);
         await m.createTable(studentProjects);
       }
@@ -175,14 +186,14 @@ class OticDatabase extends _$OticDatabase {
         // scan while a freshly installed one (onCreate → createAll) did
         // not — the same code, quietly slower on exactly the older,
         // weaker hardware this product targets.
-        await m.create(idxTopicResourcesLookup);
-        await m.create(idxTopicResourcesTitle);
+        await _createIndexIfMissing(m, idxTopicResourcesLookup);
+        await _createIndexIfMissing(m, idxTopicResourcesTitle);
       }
       if (from < 7) {
         // Teacher-created subjects. Also additive: with this table empty
         // the browse grid shows exactly the 16 bundled subjects.
         await m.createTable(customSubjects);
-        await m.create(idxCustomSubjectsSubjectId);
+        await _createIndexIfMissing(m, idxCustomSubjectsSubjectId);
       }
       if (from < 8) {
         // One row per chat, indexing the recall files in otic_sessions/.
@@ -191,7 +202,7 @@ class OticDatabase extends _$OticDatabase {
         // that stops here loses nothing — the sidebar simply starts
         // empty and refills as new chats are had.
         await m.createTable(chatSessions);
-        await m.create(idxChatSessionsRecent);
+        await _createIndexIfMissing(m, idxChatSessionsRecent);
       }
       // ── Schema 9 onward: idempotent from here down ─────────────────
       //
@@ -819,7 +830,11 @@ class OticDatabase extends _$OticDatabase {
       '(uuid, student_id, class_group_uuid, academic_year, status, created_at) '
       "SELECT $id, s.id, c.group_uuid, ?, 'active', ? "
       'FROM students s JOIN class_groups c ON c.id = s.class_group_id '
-      'WHERE c.joined = 0 AND c.group_uuid IS NOT NULL',
+      'WHERE c.joined = 0 AND c.group_uuid IS NOT NULL '
+      // Re-run safe (see the note above `if (from < 9)`): a learner who
+      // already has an enrolment keeps exactly that one.
+      '  AND NOT EXISTS (SELECT 1 FROM student_enrolments e '
+      '                  WHERE e.student_id = s.id)',
       [now.year, at],
     );
     // A database that never had teacher-made subjects has no ownership to
@@ -832,7 +847,11 @@ class OticDatabase extends _$OticDatabase {
       'FROM class_groups c JOIN custom_subjects s '
       '  ON s.owner_teacher_id = c.owner_teacher_id '
       'WHERE c.joined = 0 AND c.group_uuid IS NOT NULL '
-      '  AND c.owner_teacher_id IS NOT NULL AND s.class_group_uuid IS NULL',
+      '  AND c.owner_teacher_id IS NOT NULL AND s.class_group_uuid IS NULL '
+      '  AND NOT EXISTS (SELECT 1 FROM teaching_assignments a '
+      '                  WHERE a.teacher_id = c.owner_teacher_id '
+      '                    AND a.class_group_uuid = c.group_uuid '
+      '                    AND a.subject_id = s.subject_id)',
       [now.year, at],
     );
     await customStatement(
@@ -864,6 +883,10 @@ class OticDatabase extends _$OticDatabase {
       variables: [Variable.withString(name)],
     ).getSingleOrNull();
     return row != null;
+  }
+
+  Future<void> _createIndexIfMissing(Migrator m, Index index) async {
+    if (!await _indexExists(index.entityName)) await m.create(index);
   }
 
   Future<bool> _indexExists(String name) async {

@@ -212,6 +212,60 @@ void main() {
     await reupgraded.close();
   });
 
+  test('a current database stamped with an old version (an older build opened '
+      'it) upgrades again without throwing or duplicating records', () async {
+    final dir = await Directory.systemTemp.createTemp('otic_migration_test');
+    final file = File(p.join(dir.path, 'test.sqlite'));
+    addTearDown(() async {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    });
+
+    final seed = OticDatabase.forTesting(NativeDatabase(file));
+    await seed.customStatement(
+      "INSERT INTO teacher_profiles (name, pin_salt, pin_hash, created_at) "
+      "VALUES ('Mr Okello', 's', 'h', 0)",
+    );
+    await seed.customStatement(
+      "INSERT INTO class_groups (class_name, group_uuid, joined, owner_teacher_id) "
+      "VALUES ('S2 East', 'g1', 0, 1)",
+    );
+    await seed.customStatement(
+      "INSERT INTO students (name, class_group_id) VALUES ('Amina', 1)",
+    );
+    await seed.customStatement(
+      "INSERT INTO custom_subjects (subject_id, name, created_at, owner_teacher_id) "
+      "VALUES ('agri', 'Agriculture', 0, 1)",
+    );
+    await seed.customStatement(
+      "INSERT INTO student_enrolments "
+      "(uuid, student_id, class_group_uuid, academic_year, status, created_at) "
+      "VALUES ('e1', 1, 'g1', 2026, 'active', '2026-01-01T00:00:00Z')",
+    );
+    await seed.customStatement(
+      "INSERT INTO teaching_assignments "
+      "(uuid, teacher_id, class_group_uuid, subject_id, academic_year, term, created_at) "
+      "VALUES ('t1', 1, 'g1', 'agri', 2026, 0, '2026-01-01T00:00:00Z')",
+    );
+    // What a schema-7 build leaves behind after opening this file: every
+    // table and index still there, but user_version stamped back to 7.
+    await seed.customStatement('PRAGMA user_version = 7');
+    await seed.close();
+
+    Future<int> count(OticDatabase db, String table) async =>
+        (await db.customSelect('SELECT COUNT(*) AS n FROM $table').getSingle())
+            .read<int>('n');
+
+    // Twice: the second open must also be a no-op.
+    for (var run = 0; run < 2; run++) {
+      final db = OticDatabase.forTesting(NativeDatabase(file));
+      expect(await count(db, 'students'), 1);
+      expect(await count(db, 'student_enrolments'), 1);
+      expect(await count(db, 'teaching_assignments'), 1);
+      await db.customStatement('PRAGMA user_version = 1');
+      await db.close();
+    }
+  });
+
   test('a v16 database with synced notes upgrades to v17, keeps them, and '
       'can re-run the step', () async {
     final dir = await Directory.systemTemp.createTemp('otic_migration_test');
