@@ -4,6 +4,7 @@ import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import 'voice_locales.dart';
+import 'speech_text.dart';
 
 /// Offline-friendly voice I/O using the device's built-in TTS and STT engines.
 /// On Android, STT uses on-device recognition when available (no audio stored).
@@ -49,7 +50,7 @@ class VoiceService {
   }
 
   Future<void> speak(String text, {String languageCode = 'en'}) async {
-    final cleaned = text.trim();
+    final cleaned = speechText(text);
     if (cleaned.isEmpty) return;
 
     if (_speakingText == cleaned) {

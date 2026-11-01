@@ -130,12 +130,14 @@ void main() {
       // fed in as the material to answer from.
       expect(engine.prompts.single, isNot(contains('Topic: Photosynthesis')), reason: next);
     }
-    // A new "What is …?" starts afresh, so the old thread goes too.
+    // A new question changes grounding while preserving the chat above it.
     final engine = _Engine();
     final tutor = TutorPipeline(engine: engine, explanations: _service());
     await tutor.respond(studentMessage: 'what is photosynthesis', useCurriculum: false);
     await tutor.respond(studentMessage: 'what is love', useCurriculum: false);
-    expect(engine.prompts.single, isNot(contains('hotosynthesis')));
+    expect(engine.prompts.single, contains('THREAD:'));
+    expect(engine.prompts.single, contains('photosynthesis'));
+    expect(engine.prompts.single, contains('CURRENT: what is love'));
   });
 
   test('first aid keeps its short word and never selects camera or taxation', () async {
@@ -174,13 +176,14 @@ void main() {
     expect(await _service(lessons: true).compose('what is zzzz'), isNull);
   });
 
-  test('a new topic after a greeting starts afresh, so the old reply is not copied', () async {
+  test('a new topic after a greeting retains context and asks the current question', () async {
     final engine = _Engine();
     final tutor = TutorPipeline(engine: engine, explanations: _service(lessons: true));
     await tutor.respond(studentMessage: 'good afternoon', useCurriculum: false);
     await tutor.respond(studentMessage: 'can you teach me about triangles', useCurriculum: false);
     final prompt = engine.prompts.last;
-    expect(prompt, isNot(contains('good afternoon')));
+    expect(prompt, contains('Student: good afternoon'));
+    expect(prompt, contains('CURRENT: can you teach me about triangles'));
     expect(prompt.toLowerCase(), contains('triangle'));
   });
 

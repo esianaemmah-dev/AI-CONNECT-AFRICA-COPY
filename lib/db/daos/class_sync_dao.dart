@@ -6,6 +6,7 @@ import '../../collaboration/sync/class_crypto.dart';
 import '../../collaboration/sync/progress_report.dart';
 import '../../collaboration/sync/sync_ids.dart';
 import '../otic_database.dart';
+import '../note_document_title.dart';
 import '../tables/class_groups_table.dart';
 import '../tables/custom_subjects_table.dart';
 import '../tables/learner_subjects_table.dart';
@@ -307,12 +308,20 @@ class ClassSyncDao extends DatabaseAccessor<OticDatabase>
           d.classGroupUuid,
     };
     await transaction(() async {
-      await (delete(resourceShares)..where(
-            (t) =>
-                t.subjectId.equals(subjectId) &
-                t.documentTitle.equals(documentTitle),
-          ))
-          .go();
+      await customUpdate(
+        'DELETE FROM resource_shares WHERE subject_id = ? '
+        'AND (document_title = ? OR document_title IN ('
+        'SELECT resource_title FROM topic_resources WHERE subject_id = ? '
+        'AND class_group_uuid IS NULL AND document_title IS NULL '
+        'AND ${noteDocumentTitleSql()} = ?))',
+        variables: [
+          Variable.withString(subjectId),
+          Variable.withString(documentTitle),
+          Variable.withString(subjectId),
+          Variable.withString(documentTitle),
+        ],
+        updates: {resourceShares},
+      );
       for (final uuid in classUuids.intersection(owned)) {
         await into(resourceShares).insert(
           ResourceSharesCompanion.insert(
@@ -327,11 +336,12 @@ class ClassSyncDao extends DatabaseAccessor<OticDatabase>
 
   // ── Serving (teacher device) ────────────────────────────────────────────
 
-  static const _servedJoin =
+  static final _servedJoin =
       'FROM topic_resources t '
       'JOIN resource_shares s '
       '  ON s.subject_id = t.subject_id '
-      '  AND s.document_title = COALESCE(t.document_title, t.resource_title) '
+      '  AND (s.document_title = ${noteDocumentTitleSql(alias: 't')} '
+      '       OR s.document_title = COALESCE(t.document_title, t.resource_title)) '
       'WHERE s.class_group_uuid = ? '
       // Written here, not received from another device: received notes are
       // never passed on.
@@ -353,7 +363,7 @@ class ClassSyncDao extends DatabaseAccessor<OticDatabase>
     String subjectId,
   ) async {
     final rows = await customSelect(
-      'SELECT t.* $_servedJoin AND t.subject_id = ? ORDER BY t.id',
+      'SELECT DISTINCT t.* $_servedJoin AND t.subject_id = ? ORDER BY t.id',
       variables: [
         Variable.withString(classUuid),
         Variable.withString(subjectId),

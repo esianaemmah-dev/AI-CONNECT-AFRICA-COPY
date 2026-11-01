@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../services/pdf/diagram_detector.dart';
 import '../inference/decode_profile.dart';
 import '../inference/inference_engine.dart';
+import '../inference/prompt_budget.dart';
 import '../inference/runtime_config.dart';
 import '../../curriculum/curriculum_provider.dart';
 import '../../curriculum/topic_explanations.dart';
@@ -23,7 +24,7 @@ typedef TeacherNotesLookup = Future<String> Function(String searchText);
 ///   Answer → Clarify → Practice → Apply → Create → Reflect
 ///
 /// Each student message advances the pipeline one stage.
-/// The pipeline resets when the student changes topic.
+/// Topic grounding changes independently of the conversation memory.
 /// When curriculum content is available, it is injected into the
 /// prompt so the model teaches from accurate material.
 class TutorPipeline {
@@ -115,7 +116,8 @@ class TutorPipeline {
       _nextStage = TutorStage.answer;
       _activeMatch = null;
       _activeExplanation = null;
-      _memory.clear();
+      _memory.beginTopic(topic.replaceAll('_', ' '));
+      _clearMath();
       _shownDiagrams.clear();
     _shownSources.clear();
       await _engine.resetSession();
@@ -129,7 +131,7 @@ class TutorPipeline {
       final matched = queryLooksLikeMath(studentMessage)
           ? null
           : _curriculum?.findBestMatchDetailed(studentMessage);
-      if (matched != null) {
+      if (matched != null && (!continuing || _activeMatch == null)) {
         _activeMatch = matched;
       } else if (switched) {
         _activeMatch = null;
@@ -161,7 +163,7 @@ class TutorPipeline {
     // is bypassed: a learner asking about a syllabus topic is taught it.
     final explanation = await _explanationFor(
       studentMessage,
-      keepActive: aboutActive,
+      keepActive: continuing,
     );
     if (explanation != null &&
         asksForWholeTopic(studentMessage, explanation.wholeTopicNames)) {
@@ -294,7 +296,8 @@ class TutorPipeline {
       if (_currentTopic.isNotEmpty) {
         _nextStage = TutorStage.answer;
         _activeMatch = null;
-        _memory.clear();
+        _memory.beginTopic(detected.replaceAll('_', ' '));
+        _clearMath();
         _shownDiagrams.clear();
         _shownSources.clear();
         await _engine.resetSession();
@@ -372,11 +375,12 @@ class TutorPipeline {
     final searchText = [
       if (lesson != null) lesson.title,
       if (lesson != null) ...lesson.keyTerms.keys,
-      studentMessage,
+      _memory.resolveCurrent(studentMessage),
     ].join(' ');
     try {
-      return await lookup(searchText)
-          .timeout(const Duration(milliseconds: 600), onTimeout: () => '');
+      return await lookup(
+        searchText,
+      ).timeout(const Duration(milliseconds: 600), onTimeout: () => '');
     } catch (e) {
       debugPrint('Teacher notes lookup failed: $e');
       return '';
@@ -450,10 +454,16 @@ class TutorPipeline {
   }) {
     final raw = studentMessage.trim();
     final cap = codingCoach ? 1200 : 280;
-    final q = _memory.resolveCurrent(
-      raw.length > cap ? '${raw.substring(0, cap)}…' : raw,
-      languageCode: languageCode,
+    final userBudget = math.max(
+      200,
+      kLlamaPrefillCharBudget -
+          kLlamaTemplateOverheadChars -
+          systemPrompt.trim().length,
     );
+    final questionCap = math.min(cap, math.max(80, userBudget - 180));
+    // Keep the follow-up itself as CURRENT. Repeating the original question
+    // here encouraged the model to teach the whole lesson again.
+    final q = _clip(raw, questionCap);
 
     // Curriculum and teacher notes share ONE 700-char slot. The engines clip
     // an over-long prompt from the end, and the student's question is last —
@@ -485,10 +495,24 @@ class TutorPipeline {
     final replyShape = codingCoach
         ? 'REPLY: English. Paragraphs by default; bullets for steps. Fenced code. No thinking narration.'
         : 'REPLY: English. Paragraphs by default; bullets only for lists/steps/named concepts. No thinking narration.';
-    final memoryBudget = codingCoach ? 900 : 720;
-    return '''$notesBlock
+    final fixed =
+        '$replyShape\n${safetyNote != null ? '$safetyNote\n' : ''}CURRENT: $q\nTutor:';
+    final memoryBudget = math.min(
+      codingCoach ? 900 : 1000,
+      math.max(
+        0,
+        userBudget - fixed.length - math.min(notesBlock.length, 200) - 1,
+      ),
+    );
+    final memory = _memory.promptBlock(maxChars: memoryBudget.toInt());
+    final notesBudget = math.max(
+      0,
+      userBudget - fixed.length - memory.length - 1,
+    );
+    final grounding = notesBudget == 0 ? '' : _clip(notesBlock, notesBudget);
+    return '''$grounding
 $replyShape
-${safetyNote != null ? '$safetyNote\n' : ''}${_memory.promptBlock(maxChars: memoryBudget)}CURRENT: $q
+${safetyNote != null ? '$safetyNote\n' : ''}${memory}CURRENT: $q
 Tutor:''';
   }
 

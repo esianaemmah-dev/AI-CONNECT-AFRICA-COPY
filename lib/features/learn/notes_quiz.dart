@@ -13,6 +13,7 @@ import '../../services/custom_subject_service.dart';
 import '../../services/learning/tutor_use.dart';
 import '../../services/notes/note_quiz_builder.dart';
 import '../../services/notes/quiz_scores.dart';
+import '../../services/quiz_answer_service.dart';
 import 'subject_notes.dart';
 
 /// Multiple-choice questions written from the teacher's own notes — one
@@ -439,11 +440,12 @@ class SubjectQuizNotifier extends FamilyNotifier<SubjectQuizState, String> {
   /// language, shown inline. Using it marks the question as answered with
   /// the AI (so Achievements can tell it apart from one done on their own).
   Future<void> explain(int index) async {
-    if (state.explaining.contains(index) ||
+    if (state.explaining.isNotEmpty ||
         state.explanations.containsKey(index) ||
-        index >= state.questions.length) {
+        index < 0 || index >= state.questions.length) {
       return;
     }
+    final round = _round;
     final q = state.questions[index];
     state = state.copyWith(
       explaining: {...state.explaining, index},
@@ -451,26 +453,9 @@ class SubjectQuizNotifier extends FamilyNotifier<SubjectQuizState, String> {
     );
     try {
       final engine = await ref.read(engineLoadedProvider.future);
-      final letters = [
-        for (var o = 0; o < q.options.length; o++)
-          '${String.fromCharCode(65 + o)}) ${q.options[o]}',
-      ].join('\n');
-      final prompt =
-          'You are a patient tutor. In two or three simple sentences, explain '
-          'why the correct answer is right, so a student understands it.\n\n'
-          'Question: ${q.question}\n$letters\n'
-          'Correct answer: ${String.fromCharCode(65 + q.correct)}) '
-          '${q.options[q.correct]}\n'
-          '${q.explanation.isEmpty ? '' : 'Note: ${q.explanation}\n'}'
-          'Explanation:';
-      final english = (await engine.generate(
-        prompt: prompt,
-        maxTokens: 160,
-        temperature: 0.3,
-      )).trim();
-      final text = english.isEmpty
-          ? q.explanation
-          : await localizeIncoming(ref, english);
+      final english = await explainQuizAnswer(engine, q);
+      final text = await localizeIncoming(ref, english);
+      if (round != _round) return;
       state = state.copyWith(
         explanations: {...state.explanations, index: text},
         explaining: state.explaining.difference({index}),
@@ -481,6 +466,7 @@ class SubjectQuizNotifier extends FamilyNotifier<SubjectQuizState, String> {
       final text = q.explanation.isEmpty
           ? 'The AI could not explain this one right now.'
           : await localizeIncoming(ref, q.explanation);
+      if (round != _round) return;
       state = state.copyWith(
         explanations: {...state.explanations, index: text},
         explaining: state.explaining.difference({index}),

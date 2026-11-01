@@ -92,6 +92,7 @@ class ChatInferencePipeline {
     try {
       final engine = await loadProgrammingEngine!();
       if (engine == null) return (tutor, reasoner);
+      final isNew = _programmingTutor == null;
       _programmingTutor ??= TutorPipeline(
         engine: engine,
         curriculum: tutor.curriculum,
@@ -100,6 +101,13 @@ class ChatInferencePipeline {
         codingCoach: true,
         teacherNotes: tutor.teacherNotes,
       );
+      if (isNew) {
+        await _programmingTutor!.restoreSession(
+          memory: tutor.memorySnapshot(),
+          topic: tutor.currentTopic,
+          nextStage: tutor.nextStage,
+        );
+      }
       _programmingReasoner ??= QwenReasoningService(engine);
       _programmingThread = true;
       return (_programmingTutor!, _programmingReasoner!);

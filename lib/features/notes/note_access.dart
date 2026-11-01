@@ -27,6 +27,7 @@ final notePdfAllowedProvider = FutureProvider.autoDispose.family<bool, String>((
   ref,
   sha,
 ) async {
+  ref.watch(noteResourcesRevisionProvider);
   final readable = await ref.watch(readableNoteSubjectsProvider.future);
   if (readable == null) return true;
   final classUuid = await ref.watch(learnerClassUuidProvider.future);

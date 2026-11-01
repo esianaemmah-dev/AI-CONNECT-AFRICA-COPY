@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:ai_connect_africa/ai_core/inference/inference_engine.dart';
 import 'package:ai_connect_africa/curriculum/curriculum_models.dart';
 import 'package:ai_connect_africa/db/otic_database.dart';
+import 'package:ai_connect_africa/db/providers/db_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ai_connect_africa/features/learn/notes_quiz.dart';
 import 'package:ai_connect_africa/services/notes/note_pdf_store.dart';
 import 'package:ai_connect_africa/services/notes/note_quiz_builder.dart';
 import 'package:ai_connect_africa/services/notes/note_quiz_store.dart';
+import 'package:ai_connect_africa/services/notes/note_text_indexer.dart';
+import 'package:ai_connect_africa/services/notes/note_background_work.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ai_connect_africa/services/notes/quiz_scores.dart';
 import 'package:ai_connect_africa/services/ocr/ocr_engine.dart';
 import 'package:ai_connect_africa/services/offline_storage_service.dart';
@@ -77,6 +83,32 @@ const _passage =
     'Plants take in carbon dioxide from the air through their leaves. '
     'Using sunlight and water they turn it into glucose and give out oxygen.';
 
+class _TextPdf extends _UnreadPdf {
+  _TextPdf() : super(3);
+
+  @override
+  Future<PageText> text(int page) async => const PageText(_passage, []);
+
+  @override
+  Future<RenderedPage?> render(int page, {required int maxSide}) async => null;
+}
+
+class _RecordingBuilder extends NoteQuizBuilder {
+  _RecordingBuilder(super.ref);
+  final completed = Completer<void>();
+  int calls = 0;
+
+  @override
+  Future<void> enqueue(
+    String subjectId,
+    String documentTitle, {
+    bool fresh = false,
+  }) async {
+    calls++;
+    if (!completed.isCompleted) completed.complete();
+  }
+}
+
 void main() {
   group('uploading a PDF', () {
     late OticDatabase db;
@@ -93,42 +125,98 @@ void main() {
       await dir.delete(recursive: true);
     });
 
-    test('saves at once, reading no page, and hands it to the reader', () async {
-      final pdf = _UnreadPdf(600);
-      final handed = <NotePdf>[];
-      final noted = <String>[];
-      final report = await ResourceImportService(
-        OfflineStorageService(db),
-        openPdf: (_, _) async => pdf,
-        pdfStore: store,
-        onPdfSaved: handed.add,
-        onNoteSaved: (_, title) => noted.add(title),
-      ).importBytes(
-        fileName: 'Biology_Book.pdf',
-        bytes: Uint8List.fromList('%PDF-1.4 a big book'.codeUnits),
-        subjectId: 'biology',
-        documentTitle: 'Biology Book (2)',
-      );
+    test(
+      'extracts in the background and queues generation once at completion',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final pdf = _TextPdf();
+        late _RecordingBuilder builder;
+        final container = ProviderContainer(
+          overrides: [
+            dbProvider.overrideWithValue(db),
+            notePdfStoreProvider.overrideWithValue(store),
+            ocrEngineProvider.overrideWith((ref) async => null),
+            noteBackgroundWorkProvider.overrideWithValue(
+              NoteBackgroundWork(pause: Duration.zero),
+            ),
+            noteQuizBuilderProvider.overrideWith(
+              (ref) => builder = _RecordingBuilder(ref),
+            ),
+            noteTextIndexerProvider.overrideWith(
+              (ref) => NoteTextIndexer(ref, openPdf: (_, _) async => pdf),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        final bytes = Uint8List.fromList('%PDF-1.4 book'.codeUnits);
+        final sha = (await store.put(bytes))!;
+        await store.recordOwn(
+          subjectId: 'biology',
+          documentTitle: 'Book',
+          sha: sha,
+          pages: 3,
+          bytes: bytes.length,
+        );
+        final marker = (await store.recorded()).single;
+        builder = container.read(noteQuizBuilderProvider) as _RecordingBuilder;
+        await container.read(noteTextIndexerProvider).enqueue(marker);
+        await builder.completed.future.timeout(const Duration(seconds: 5));
+        expect(builder.calls, 1);
+        expect(pdf.closed, isTrue);
+        expect(
+          container.read(noteTextIndexerProvider).isReading('biology', 'Book'),
+          isFalse,
+        );
+        expect(
+          await db.topicResourceDao.ownNoteText(
+            subjectId: 'biology',
+            documentTitle: 'Book',
+          ),
+          hasLength(3),
+        );
+      },
+    );
 
-      expect(report.ok, isTrue, reason: report.failure);
-      expect(report.readingLater, isTrue);
-      expect(report.pageCount, 600);
-      expect(pdf.closed, isTrue);
-      expect(handed.single.pages, 600);
-      expect(handed.single.documentTitle, 'Biology Book (2)');
-      // Questions wait for text, which the reader writes later.
-      expect(noted, isEmpty);
+    test(
+      'saves at once, reading no page, and hands it to the reader',
+      () async {
+        final pdf = _UnreadPdf(600);
+        final handed = <NotePdf>[];
+        final noted = <String>[];
+        final report =
+            await ResourceImportService(
+              OfflineStorageService(db),
+              openPdf: (_, _) async => pdf,
+              pdfStore: store,
+              onPdfSaved: handed.add,
+              onNoteSaved: (_, title) => noted.add(title),
+            ).importBytes(
+              fileName: 'Biology_Book.pdf',
+              bytes: Uint8List.fromList('%PDF-1.4 a big book'.codeUnits),
+              subjectId: 'biology',
+              documentTitle: 'Biology Book (2)',
+            );
 
-      // Openable now: the marker is there and the file is kept.
-      final recorded = await store.recorded(subjectId: 'biology');
-      expect(recorded.single.documentTitle, 'Biology Book (2)');
-      expect(await store.fileFor(recorded.single.sha256), isNotNull);
-      final text = await db.topicResourceDao.ownNoteText(
-        subjectId: 'biology',
-        documentTitle: 'Biology Book (2)',
-      );
-      expect(text, isEmpty);
-    });
+        expect(report.ok, isTrue, reason: report.failure);
+        expect(report.readingLater, isTrue);
+        expect(report.pageCount, 600);
+        expect(pdf.closed, isTrue);
+        expect(handed.single.pages, 600);
+        expect(handed.single.documentTitle, 'Biology Book (2)');
+        // Questions wait for text, which the reader writes later.
+        expect(noted, isEmpty);
+
+        // Openable now: the marker is there and the file is kept.
+        final recorded = await store.recorded(subjectId: 'biology');
+        expect(recorded.single.documentTitle, 'Biology Book (2)');
+        expect(await store.fileFor(recorded.single.sha256), isNotNull);
+        final text = await db.topicResourceDao.ownNoteText(
+          subjectId: 'biology',
+          documentTitle: 'Biology Book (2)',
+        );
+        expect(text, isEmpty);
+      },
+    );
 
     test('a second file in the subject is added beside the first', () async {
       final importer = ResourceImportService(
@@ -137,59 +225,104 @@ void main() {
         pdfStore: store,
         onPdfSaved: (_) {},
       );
-      for (final (name, body) in [('Term 1.pdf', 'one'), ('Term 2.pdf', 'two')]) {
+      for (final (name, body) in [
+        ('Term 1.pdf', 'one'),
+        ('Term 2.pdf', 'two'),
+      ]) {
         await importer.importBytes(
           fileName: name,
           bytes: Uint8List.fromList('%PDF-1.4 $body'.codeUnits),
           subjectId: 'biology',
         );
       }
-      final titles = (await store.recorded(subjectId: 'biology'))
-          .map((p) => p.documentTitle)
-          .toSet();
+      final titles = (await store.recorded(
+        subjectId: 'biology',
+      )).map((p) => p.documentTitle).toSet();
       expect(titles, {'Term 1', 'Term 2'});
+    });
+
+    test('an already open PDF list updates on save and deletion', () async {
+      final container = ProviderContainer(
+        overrides: [
+          dbProvider.overrideWithValue(db),
+          notePdfStoreProvider.overrideWithValue(store),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = ownNotePdfsProvider('biology');
+      final saved = <String>[];
+      final removed = <String>[];
+      final added = container.listen(provider, (_, value) {
+        if (value.valueOrNull?.containsKey('Book') == true) saved.add('Book');
+        if (saved.isNotEmpty && value.valueOrNull?.isEmpty == true) {
+          removed.add('Book');
+        }
+      });
+      addTearDown(added.close);
+      expect(await container.read(provider.future), isEmpty);
+      await ResourceImportService(
+        OfflineStorageService(db),
+        openPdf: (_, _) async => _UnreadPdf(600),
+        pdfStore: store,
+        onPdfSaved: (_) {},
+      ).importBytes(
+        fileName: 'Book.pdf',
+        bytes: Uint8List.fromList('%PDF-1.4 book'.codeUnits),
+        subjectId: 'biology',
+      );
+      await pumpEventQueue(times: 50);
+      expect(saved, isNotEmpty);
+      expect((await container.read(provider.future))['Book']?.pages, 600);
+      await db.delete(db.topicResources).go();
+      await pumpEventQueue(times: 50);
+      expect(removed, isNotEmpty);
     });
   });
 
-  test('resuming drops only rows of a batch cut off before it was recorded', () async {
-    final db = OticDatabase.forTesting(DatabaseConnection(NativeDatabase.memory()));
-    addTearDown(db.close);
-    final storage = OfflineStorageService(db);
-    final before = DateTime.utc(2026, 10, 6, 9);
-    final recordedAt = DateTime.utc(2026, 10, 6, 9, 1);
-    final after = DateTime.utc(2026, 10, 6, 9, 2);
-    for (final (topic, at) in [('Cells', before), ('Tissues', after)]) {
-      await storage.insertTopicResource(
-        subjectId: 'biology',
-        topicKey: topic,
-        resourceTitle: 'Book — $topic',
-        content: 'Notes about $topic and how they work in living things.',
-        documentTitle: 'Book',
-        createdAt: at,
+  test(
+    'resuming drops only rows of a batch cut off before it was recorded',
+    () async {
+      final db = OticDatabase.forTesting(
+        DatabaseConnection(NativeDatabase.memory()),
       );
-    }
-    await db.topicResourceDao.insertQuizRow(
-      subjectId: 'biology',
-      documentTitle: 'Book',
-      content: '[QUIZ: page=0] {}',
-      termMarker: 0,
-    );
+      addTearDown(db.close);
+      final storage = OfflineStorageService(db);
+      final before = DateTime.utc(2026, 10, 6, 9);
+      final recordedAt = DateTime.utc(2026, 10, 6, 9, 1);
+      final after = DateTime.utc(2026, 10, 6, 9, 2);
+      for (final (topic, at) in [('Cells', before), ('Tissues', after)]) {
+        await storage.insertTopicResource(
+          subjectId: 'biology',
+          topicKey: topic,
+          resourceTitle: 'Book — $topic',
+          content: 'Notes about $topic and how they work in living things.',
+          documentTitle: 'Book',
+          createdAt: at,
+        );
+      }
+      await db.topicResourceDao.insertQuizRow(
+        subjectId: 'biology',
+        documentTitle: 'Book',
+        content: '[QUIZ: page=0] {}',
+        termMarker: 0,
+      );
 
-    await db.topicResourceDao.deleteOwnNoteText(
-      subjectId: 'biology',
-      documentTitle: 'Book',
-      createdAfter: recordedAt.toIso8601String(),
-    );
-    final left = await db.topicResourceDao.ownNoteText(
-      subjectId: 'biology',
-      documentTitle: 'Book',
-    );
-    expect(left.map((r) => r.topicKey), ['cells']);
-    expect(
-      await db.topicResourceDao.quizRows(subjectId: 'biology'),
-      hasLength(1),
-    );
-  });
+      await db.topicResourceDao.deleteOwnNoteText(
+        subjectId: 'biology',
+        documentTitle: 'Book',
+        createdAfter: recordedAt.toIso8601String(),
+      );
+      final left = await db.topicResourceDao.ownNoteText(
+        subjectId: 'biology',
+        documentTitle: 'Book',
+      );
+      expect(left.map((r) => r.topicKey), ['cells']);
+      expect(
+        await db.topicResourceDao.quizRows(subjectId: 'biology'),
+        hasLength(1),
+      );
+    },
+  );
 
   group('topics', () {
     TopicResource row(int id, String topic, String content) => TopicResource(
@@ -250,18 +383,25 @@ void main() {
       expect(NotesQuizGenerator.groundedInPassage(wrong, _passage), isFalse);
     });
 
-    test('a question is kept only when the notes give the same answer', () async {
-      final kept = await NotesQuizGenerator(_QuizEngine())
-          .checkedQuestion(_passage, subject: 'Biology', random: Random(3));
-      expect(kept.question, isNotNull);
-      expect(kept.question!.options[kept.question!.correct], 'Carbon dioxide');
+    test(
+      'a question is kept only when the notes give the same answer',
+      () async {
+        final kept = await NotesQuizGenerator(
+          _QuizEngine(),
+        ).checkedQuestion(_passage, subject: 'Biology', random: Random(3));
+        expect(kept.question, isNotNull);
+        expect(
+          kept.question!.options[kept.question!.correct],
+          'Carbon dioxide',
+        );
 
-      final dropped = await NotesQuizGenerator(
-        _QuizEngine(checkAnswer: 'Oxygen'),
-      ).checkedQuestion(_passage, subject: 'Biology', random: Random(3));
-      expect(dropped.question, isNull);
-      expect(dropped.engineFailed, isFalse);
-    });
+        final dropped = await NotesQuizGenerator(
+          _QuizEngine(checkAnswer: 'Oxygen'),
+        ).checkedQuestion(_passage, subject: 'Biology', random: Random(3));
+        expect(dropped.question, isNull);
+        expect(dropped.engineFailed, isFalse);
+      },
+    );
 
     test('a stored question keeps its topic', () {
       final back = NoteQuizStore.parse(
@@ -273,7 +413,9 @@ void main() {
   });
 
   test('quiz scores: latest round and best per topic', () async {
-    final db = OticDatabase.forTesting(DatabaseConnection(NativeDatabase.memory()));
+    final db = OticDatabase.forTesting(
+      DatabaseConnection(NativeDatabase.memory()),
+    );
     addTearDown(db.close);
     final scores = QuizScores(db);
     await scores.record(

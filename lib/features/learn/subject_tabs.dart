@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../db/providers/db_provider.dart';
 import '../../gamification/badge_service.dart';
 import '../../l10n/app_locale.dart';
+import '../../services/quiz_answer_service.dart';
 import '../../shared/widgets/responsive.dart';
 import '../notes/note_access.dart';
 import '../notes/note_pdf_screen.dart';
@@ -340,6 +341,7 @@ class _QuestionCard extends ConsumerWidget {
     final q = quiz.questions[index];
     final answered = chosen != null;
     final tutorUsed = quiz.tutorUsed.contains(index);
+    final chatBusy = ref.watch(chatProvider.select((chat) => chat.valueOrNull?.isGenerating ?? false));
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -391,11 +393,11 @@ class _QuestionCard extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => ref
+                  onPressed: chatBusy || quiz.explaining.isNotEmpty ? null : () => ref
                       .read(subjectQuizProvider(subjectId).notifier)
                       .explain(index),
                   icon: const Icon(Icons.smart_toy_outlined, size: 18),
-                  label: Text(tr(context, 'Ask AI')),
+                  label: Text(tr(context, 'Answer with AI')),
                 ),
               ),
             if (tutorUsed)
@@ -421,6 +423,8 @@ class _QuestionCard extends ConsumerWidget {
               ),
             if (quiz.explanations[index] case final ai?) ...[
               const SizedBox(height: 8),
+              Text('${tr(context, 'Correct answer')}: ${quizAnswerLabel(q)}',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),

@@ -12,11 +12,13 @@ import '../../db/providers/db_provider.dart';
 import '../../features/learn/notes_quiz.dart';
 import '../../features/learn/subject_notes.dart';
 import '../custom_subject_service.dart';
+import '../assignments/class_assignments.dart';
 import '../offline_storage_service.dart';
 import '../pdf/diagram_detector.dart';
 import '../learning/tutor_use.dart';
 import 'note_quiz_store.dart';
 import 'note_text_indexer.dart';
+import 'note_background_work.dart';
 
 /// Passages shorter than this are headings or captions, not worth a question.
 const _minPassageChars = 120;
@@ -104,22 +106,28 @@ class NoteQuizBuilder {
   }
 
   Future<void> _pump() async {
-    if (_running) return;
+    if (_running || (_retry?.isActive ?? false)) return;
     _running = true;
     try {
       while (_queue.isNotEmpty) {
         final note = _queue.first;
         _building = note;
-        final bool ok;
+        bool ok;
         try {
           ok = await _build(note.$1, note.$2);
+        } catch (e) {
+          debugPrint('Note quiz failed, retrying later: $e');
+          ok = false;
         } finally {
           _building = null;
         }
         if (_again.remove(note) && ok) continue;
         if (!ok) {
           _retry?.cancel();
-          _retry = Timer(retryAfter, () => unawaited(_pump()));
+          _retry = Timer(retryAfter, () {
+            _retry = null;
+            unawaited(_pump());
+          });
           return;
         }
         _queue.removeFirst();
@@ -157,8 +165,16 @@ class NoteQuizBuilder {
         if (!done.contains(id)) work.add((topics[t], i, passages[i]));
       }
     }
-    if (work.isEmpty) return true;
+    if (work.isEmpty) {
+      if (!reading) {
+        await _ref
+            .read(classAssignmentsProvider)
+            .prepareNotePractice(subjectId, documentTitle);
+      }
+      return true;
+    }
 
+    await _chatIdle();
     final InferenceEngine brain;
     try {
       brain = await _ref.read(engineLoadedProvider.future);
@@ -183,11 +199,23 @@ class NoteQuizBuilder {
       if (!await _stillThere(db, subjectId, documentTitle)) return true;
       await _chatIdle();
       final started = DateTime.now();
-      final r = await generator.checkedQuestion(
-        readableNoteText(passage),
-        subject: subject,
-        topic: topic.title,
-      );
+      final r = await _ref.read(noteBackgroundWorkProvider).run(() async {
+        // Chat may have started while this job waited behind a PDF page.
+        // Release the slot and retry later rather than holding up extraction.
+        final busy = _ref.read(chatProvider).valueOrNull?.isGenerating ?? false;
+        final lastReply = _ref.read(tutorLastReplyProvider);
+        if (busy ||
+            (lastReply != null &&
+                DateTime.now().difference(lastReply) < chatQuietFor)) {
+          return null;
+        }
+        return generator.checkedQuestion(
+          readableNoteText(passage),
+          subject: subject,
+          topic: topic.title,
+        );
+      });
+      if (r == null) return false;
       if (r.engineFailed) return false;
       if (_again.contains(note)) return true;
       final q = r.question;
@@ -211,6 +239,13 @@ class NoteQuizBuilder {
         '${q == null ? 'dropped' : 'saved'} in '
         '${DateTime.now().difference(started).inMilliseconds} ms',
       );
+    }
+    if (!_ref
+        .read(noteTextIndexerProvider)
+        .isReading(subjectId, documentTitle)) {
+      await _ref
+          .read(classAssignmentsProvider)
+          .prepareNotePractice(subjectId, documentTitle);
     }
     return true;
   }

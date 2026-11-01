@@ -23,6 +23,7 @@ import '../teacher/teacher_profiles.dart';
 
 final _visibleAssignmentsProvider =
     FutureProvider.autoDispose<List<ClassAssignment>>((ref) async {
+      ref.watch(noteResourcesRevisionProvider);
       final classUuid = await ref.watch(learnerClassUuidProvider.future);
       return ref.watch(classAssignmentsProvider).visible(classUuid);
     });
@@ -674,6 +675,7 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
 final _gradableProvider = FutureProvider.autoDispose<List<ClassAssignment>>((
   ref,
 ) async {
+  ref.watch(noteResourcesRevisionProvider);
   final me = ref.watch(activeTeacherIdProvider);
   if (me == null) return const [];
   final policy = ref.watch(policyProvider);

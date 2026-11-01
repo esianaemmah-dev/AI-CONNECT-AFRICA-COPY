@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../ai_core/inference/runtime_config.dart';
-import '../../ai_core/inference/sanitize_llm_response.dart';
 import '../../ai_core/providers/ai_provider.dart';
 import '../../l10n/language_provider.dart';
 import '../../ai_core/tutor/school_math.dart';
 import '../../ai_core/tutor/school_math_l10n.dart';
-import '../../ai_core/tutor/tutor_contract.dart';
+import '../../services/quiz_answer_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../curriculum/curriculum_models.dart';
 import '../../l10n/app_locale.dart';
@@ -29,20 +27,6 @@ class _QuizAiAnswerState extends ConsumerState<QuizAiAnswer> {
   String? _error;
   SchoolMathSolution? _math;
 
-  String _prompt() {
-    final q = widget.question;
-    final letter = String.fromCharCode(65 + q.correct.clamp(0, 25));
-    final options = q.options.asMap().entries
-        .map((e) => '${String.fromCharCode(65 + e.key)}) ${e.value}')
-        .join('\n');
-    return '''$kTutorContract
-CURRICULUM: this quiz item. Teach the method. Correct option is $letter.
-Q: ${q.question}
-$options
-Student: Explain with named steps (never Sum:). Show only necessary calculations.
-Tutor:''';
-  }
-
   Future<void> _run() async {
     if (_busy) return;
     setState(() {
@@ -53,8 +37,9 @@ Tutor:''';
     });
     try {
       final q = widget.question;
+      quizAnswerLabel(q);
       final solved = solveSchoolMath(
-        '${q.question} ${q.options.join(' ')}',
+        q.question,
       );
       if (solved != null) {
         final lang = ref.read(appLanguageProvider);
@@ -72,18 +57,13 @@ Tutor:''';
         return;
       }
       final engine = await ref.read(engineLoadedProvider.future);
-      final raw = await engine.generate(
-        prompt: _prompt(),
-        maxTokens: kMaxNewTokens,
-        temperature: kTutorTemperature,
-        onToken: (token) {
-          if (!mounted) return;
-          setState(() => _text = sanitizeLLMResponse(_text + token));
-        },
-      );
-      final shown = sanitizeLLMResponse(
-        _text.trim().isNotEmpty ? _text : raw,
-      );
+      final english = await explainQuizAnswer(engine, q);
+      var shown = english;
+      final lang = ref.read(appLanguageProvider);
+      if (lang != 'en') {
+        final translator = await ref.read(translationPipelineProvider.future);
+        if (translator != null) shown = await translator.fromEnglish(english, lang);
+      }
       if (mounted) setState(() => _text = shown);
     } catch (_) {
       if (mounted) {
@@ -99,12 +79,13 @@ Tutor:''';
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final chatBusy = ref.watch(chatProvider.select((chat) => chat.valueOrNull?.isGenerating ?? false));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: _busy ? null : _run,
+          onPressed: _busy || chatBusy ? null : _run,
           icon: _busy
               ? const SizedBox(
                   width: 16,
@@ -112,10 +93,12 @@ Tutor:''';
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.auto_awesome, size: 18),
-          label: Text(tr(context, 'Use AI to answer this question')),
+          label: Text(tr(context, 'Answer with AI')),
         ),
         if (_math != null || _text.isNotEmpty || _error != null) ...[
           const SizedBox(height: 10),
+          if (_error == null) Text('${tr(context, 'Correct answer')}: ${quizAnswerLabel(widget.question)}',
+            style: const TextStyle(fontWeight: FontWeight.w600)),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),

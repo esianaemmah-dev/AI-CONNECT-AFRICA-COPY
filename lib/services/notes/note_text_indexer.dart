@@ -13,6 +13,7 @@ import '../pdf/pdf_page_extractor.dart';
 import '../resource_import_service.dart';
 import 'note_pdf_store.dart';
 import 'note_quiz_builder.dart';
+import 'note_background_work.dart';
 
 /// Reads an uploaded PDF's pages into the note's text, in the background.
 ///
@@ -26,20 +27,25 @@ import 'note_quiz_builder.dart';
 /// - after each batch the next page is saved, so closing the app loses at
 ///   most one batch; rows of a batch cut off before it was recorded are
 ///   dropped on resume (by their `created_at`);
-/// - each batch hands the note to [NoteQuizBuilder], so the first topics get
-///   questions while later pages are still being read;
+/// - once extraction finishes, [NoteQuizBuilder] writes questions from the
+///   stored text, avoiding repeated model jobs as each page arrives;
 /// - it stops once the note is deleted or re-uploaded.
 ///
 /// Rows go in through drift, so the class share server's cache sees them and
 /// students receive the text on their next sync.
 class NoteTextIndexer {
-  NoteTextIndexer(this._ref);
+  NoteTextIndexer(this._ref, {PdfOpener? openPdf})
+    : _openPdf = openPdf ?? _defaultOpenPdf;
+
+  static Future<PdfPageSource> _defaultOpenPdf(Uint8List bytes, String name) =>
+      PdfrxPageSource.open(bytes, name: name);
 
   final Ref _ref;
+  final PdfOpener _openPdf;
   final _queue = Queue<NotePdf>();
   bool _running = false;
 
-  static const batchPages = 10;
+  static const batchPages = 1;
 
   static String _id(NotePdf p) =>
       '${p.subjectId}|${p.documentTitle}|${p.sha256}';
@@ -121,7 +127,7 @@ class NoteTextIndexer {
         _queue.removeFirst();
         _clearProgress(pdf);
         _refresh(pdf);
-        // Questions for the last topic, now that it is complete.
+        // Generate from the complete text once, after releasing this note.
         unawaited(
           _ref
               .read(noteQuizBuilderProvider)
@@ -143,10 +149,7 @@ class NoteTextIndexer {
 
     final PdfPageSource source;
     try {
-      source = await PdfrxPageSource.open(
-        await file.readAsBytes(),
-        name: 'read-${pdf.sha256}',
-      );
+      source = await _openPdf(await file.readAsBytes(), 'read-${pdf.sha256}');
     } catch (e) {
       debugPrint('Reading: could not open "${pdf.documentTitle}": $e');
       await prefs.setInt(nextKey(pdf), pdf.pages + 1);
@@ -178,14 +181,18 @@ class NoteTextIndexer {
       while (next <= pages) {
         if (!await _stillRecorded(store, pdf)) return;
         final last = math.min(next + batchPages - 1, pages);
-        final read = await extractPdfPages(
-          source,
-          documentTitle: pdf.documentTitle,
-          ocr: ocr,
-          firstPage: next,
-          lastPage: last,
-          onProgress: (done, _) => _setProgress(pdf, done, pages),
-        );
+        final read = await _ref
+            .read(noteBackgroundWorkProvider)
+            .run(
+              () => extractPdfPages(
+                source,
+                documentTitle: pdf.documentTitle,
+                ocr: ocr,
+                firstPage: next,
+                lastPage: last,
+                onProgress: (done, _) => _setProgress(pdf, done, pages),
+              ),
+            );
         if (!await _stillRecorded(store, pdf)) return;
         if (read.text.trim().isNotEmpty) {
           final stamp = DateTime.now();
@@ -215,11 +222,6 @@ class NoteTextIndexer {
         await prefs.setInt(nextKey(pdf), next);
         _setProgress(pdf, last, pages);
         _refresh(pdf);
-        unawaited(
-          _ref
-              .read(noteQuizBuilderProvider)
-              .enqueue(pdf.subjectId, pdf.documentTitle),
-        );
       }
       await prefs.setInt(nextKey(pdf), pages + 1);
     } finally {

@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../collaboration/cloud/cloud_sync.dart';
 import '../../collaboration/sync/sync_ids.dart';
-import '../../db/daos/topic_resource_dao.dart' show kAssignmentRecordTopicKey;
+import '../../db/daos/topic_resource_dao.dart'
+    show kAssignmentRecordTopicKey, kQuizTopicKey, kRecordTopicPrefix;
 import '../../db/otic_database.dart';
 import '../../db/providers/db_provider.dart';
+import '../notes/note_quiz_store.dart';
 
 /// Topic key of a class assignment's row. Like the PDF marker and quiz
 /// rows it is part of a note, so it is signed with the teacher's channel,
@@ -278,6 +280,77 @@ class ClassAssignments {
 
   final OticDatabase _db;
   final CloudRecordSink? _cloud;
+
+  /// Reuses checked quiz questions for one practice assignment per note.
+  /// It stays local until the teacher chooses to share it with a class.
+  Future<String?> prepareNotePractice(
+    String subjectId,
+    String noteTitle,
+  ) => _db.transaction(() async {
+    final source =
+        await (_db.select(_db.topicResources)
+              ..where((t) => t.subjectId.equals(subjectId))
+              ..where((t) => t.documentTitle.equals(noteTitle))
+              ..where((t) => t.classGroupUuid.isNull())
+              ..where((t) => t.topicKey.like('$kRecordTopicPrefix%').not())
+              ..limit(1))
+            .getSingleOrNull();
+    if (source == null) return null;
+    final title = 'Practice: $noteTitle';
+    final documentTitle = '${AssignmentKind.assignment.label} — $title';
+    final existing =
+        await (_db.select(_db.topicResources)
+              ..where((t) => t.subjectId.equals(subjectId))
+              ..where((t) => t.documentTitle.equals(documentTitle))
+              ..where((t) => t.classGroupUuid.isNull())
+              ..limit(1))
+            .getSingleOrNull();
+    if (existing != null) return documentTitle;
+    final questions = NoteQuizStore.fromRows(
+      await (_db.select(_db.topicResources)
+            ..where((t) => t.subjectId.equals(subjectId))
+            ..where((t) => t.documentTitle.equals(noteTitle))
+            ..where((t) => t.classGroupUuid.isNull())
+            ..where((t) => t.topicKey.equals(kQuizTopicKey))
+            ..orderBy([(t) => OrderingTerm.asc(t.id)])
+            ..limit(8))
+          .get(),
+    );
+    if (questions.isEmpty) return null;
+    final body = StringBuffer('Answer these questions from $noteTitle.\n\n');
+    for (var i = 0; i < questions.length; i++) {
+      final q = questions[i].question;
+      body.writeln('${i + 1}. ${q.question}');
+      for (var j = 0; j < q.options.length; j++) {
+        body.writeln('${String.fromCharCode(65 + j)}) ${q.options[j]}');
+      }
+      body.writeln();
+    }
+    final saved = await create(
+      subjectId: subjectId,
+      title: title,
+      instructions: body.toString(),
+      maxPoints: questions.length,
+      termMarker: source.termMarker,
+    );
+    final owner =
+        await (_db.select(_db.noteOwners)
+              ..where((t) => t.subjectId.equals(subjectId))
+              ..where((t) => t.documentTitle.equals(noteTitle)))
+            .getSingleOrNull();
+    if (saved != null && owner != null) {
+      await _db
+          .into(_db.noteOwners)
+          .insertOnConflictUpdate(
+            NoteOwnersCompanion.insert(
+              subjectId: subjectId,
+              documentTitle: saved,
+              teacherId: owner.teacherId,
+            ),
+          );
+    }
+    return saved;
+  });
 
   Future<void> _queue(String kind, String uuid, {String? recordId}) async {
     try {

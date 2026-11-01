@@ -312,9 +312,19 @@ final notePdfStoreProvider = Provider<NotePdfStore>(
   (ref) => NotePdfStore(ref.watch(dbProvider)),
 );
 
+/// Database notifications, without loading PDF bytes or resource text. Lists
+/// refresh on save, deletion, sync, and newly generated questions.
+final noteResourcesRevisionProvider = StreamProvider.autoDispose<int>((ref) {
+  final db = ref.watch(dbProvider);
+  var revision = 0;
+  final changes = db.tableUpdates(TableUpdateQuery.onTable(db.topicResources));
+  return changes.map((_) => ++revision);
+});
+
 /// This device's own notes' PDFs in one subject, by document title.
 final ownNotePdfsProvider = FutureProvider.autoDispose
     .family<Map<String, NotePdf>, String>((ref, subjectId) async {
+      ref.watch(noteResourcesRevisionProvider);
       final pdfs = await ref
           .watch(notePdfStoreProvider)
           .recorded(subjectId: subjectId, ownOnly: true);
@@ -324,6 +334,7 @@ final ownNotePdfsProvider = FutureProvider.autoDispose
 /// The PDFs a learner in [classUuid] may open: this device's own notes'
 /// and those received for that class.
 final visibleNotePdfsProvider = FutureProvider.autoDispose
-    .family<List<NotePdf>, String?>(
-      (ref, classUuid) => ref.watch(notePdfStoreProvider).visibleTo(classUuid),
-    );
+    .family<List<NotePdf>, String?>((ref, classUuid) {
+      ref.watch(noteResourcesRevisionProvider);
+      return ref.watch(notePdfStoreProvider).visibleTo(classUuid);
+    });
