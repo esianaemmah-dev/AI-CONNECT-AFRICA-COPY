@@ -57,12 +57,9 @@ class AdminService {
     _sessions.removeWhere((session) => !session.isValid);
   }
 
-  String? pendingRecoveryCode;
   Future<AdminSession> _issue(String name) async {
     final session = AdminSession._(name, _db);
     _sessions.add(session);
-    if ((await _row())?.recoveryHash == null)
-      pendingRecoveryCode = await createRecoveryCode(session);
     return session;
   }
 
@@ -119,49 +116,6 @@ class AdminService {
   /// The Admin's PIN in the clear, for a signed-in Admin to note down; null
   /// for an Admin set up before it was stored.
   Future<String?> pin() async => null;
-
-  /// Sets a new Admin PIN when the current one is forgotten, keeping every
-  /// record. Recovery only — the sign-in screen offers it. False when no
-  /// Admin exists or the new PIN is malformed.
-  Future<bool> recoverPin(String next, {String recoveryCode = ''}) async {
-    if (!TeacherPin.isValidFormat(next)) return false;
-    final row = await _row();
-    if (row == null || row.recoveryHash == null || row.recoverySalt == null)
-      return false;
-    final ok = await LocalAuthThrottle().check(
-      'admin_recovery',
-      () =>
-          pinMatches(row.recoverySalt!, recoveryCode.trim(), row.recoveryHash!),
-    );
-    if (!ok) return false;
-    final salt = newPinSalt();
-    await (_db.update(_db.adminIdentity)..where((t) => t.id.equals(1))).write(
-      AdminIdentityCompanion(
-        pinSalt: Value(salt),
-        pinHash: Value(await hashPinStrong(salt, next)),
-        pinPlain: const Value(null),
-        recoverySalt: const Value(null),
-        recoveryHash: const Value(null),
-      ),
-    );
-    await _log('admin.pin_recovered');
-    _revokeSessions();
-    return true;
-  }
-
-  Future<String> createRecoveryCode(AdminSession session) async {
-    _validate(session, sensitive: true);
-    final code = newRecoveryCode();
-    final salt = newPinSalt();
-    await (_db.update(_db.adminIdentity)..where((t) => t.id.equals(1))).write(
-      AdminIdentityCompanion(
-        recoverySalt: Value(salt),
-        recoveryHash: Value(await hashPinStrong(salt, code)),
-      ),
-    );
-    await _log('admin.recovery_rotated');
-    return code;
-  }
 
   Future<AdminSession?> signIn(String pin) async {
     final row = await _row();

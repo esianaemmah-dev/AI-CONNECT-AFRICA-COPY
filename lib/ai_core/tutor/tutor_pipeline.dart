@@ -192,6 +192,8 @@ class TutorPipeline {
     final replyTokens = !codingCoach && maxTokens == kMaxNewTokens &&
             askedTopic(studentMessage) != null ? 1100 : maxTokens;
     final buffer = StringBuffer();
+    final started = Stopwatch()..start();
+    int? firstTokenMs;
     String text;
     try {
       // Prose decode + loop guard — see decode_profile.dart.
@@ -202,10 +204,15 @@ class TutorPipeline {
           maxTokens: replyTokens,
           temperature: kTutorTemperature,
           onToken: (token) async {
+            firstTokenMs ??= started.elapsedMilliseconds;
             buffer.write(token);
             await emitToken(onToken, token);
           },
         ),
+      );
+      debugPrint(
+        'Tutor reply: first words ${firstTokenMs ?? '-'} ms, '
+        'done ${started.elapsedMilliseconds} ms',
       );
     } catch (e, st) {
       debugPrint('TutorPipeline.respond failed: $e\n$st');

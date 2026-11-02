@@ -1,6 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'shared/widgets/staff_session_scope.dart';
-import 'features/learn/class_learning_panel.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
@@ -282,17 +281,10 @@ class _ModelGateState extends ConsumerState<ModelGate> {
         final missingPackages = packagesReady.valueOrNull != true;
         if (missingChat || missingPackages) {
           final err = bootstrap.asData?.value.error;
-          return Column(
-            children: [
-              const ClassLearningPanel(),
-              Expanded(
-                child: ModelNotInstalledScreen(
-                  info: info,
-                  onTryDemo: () => setState(() => _showDemoAnyway = true),
-                  bootstrapError: err,
-                ),
-              ),
-            ],
+          return ModelNotInstalledScreen(
+            info: info,
+            onTryDemo: () => setState(() => _showDemoAnyway = true),
+            bootstrapError: err,
           );
         }
         return widget.child;

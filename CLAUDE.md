@@ -157,6 +157,15 @@ own prompt. Don't confuse it with the Teacher *role*/dashboard, which stays.
   2026-10-01). One Admin per school, on whichever device they use — see
   **Admin and teaching assignments** below. `/admin` is the Admin section
   (`lib/features/admin/`), behind the Admin's own PIN, not the Teachers PIN.
+  Since 2026-11-02 Staff access (`/teachers`) always shows "Admin sign
+  in", whether or not a teacher is signed in (it is not in the side menu),
+  and `/admin` opens even before anyone has onboarded on the device.
+  Admin PIN recovery codes were removed on 2026-11-02 at the user's request:
+  no code is made or shown, there is no "Forgot PIN?", and a forgotten
+  Admin PIN can't be reset in the app. The `admin_identity.recovery_*`
+  columns stay (always null) so no schema change was needed. The home page no longer shows the
+  class quick-access card (My notes / Assignments / Join class); those are
+  in the side menu, and the card stays on My notes.
 - **Teachers** (`/teachers`, `lib/features/teachers/teachers_screen.dart`)
   is where teachers sign in, plus their tools and the device/packages
   info. It is gated by the Teachers PIN only, not by a profile.
@@ -498,7 +507,19 @@ loosen any of these rules:
   served only if it was written on this device (`class_group_uuid IS NULL`)
   *and* has a `resource_shares` row for that class.
   - Notes are never shared until the teacher ticks a class (Lesson
-    materials → Share with classes).
+    materials → Share with classes). **Amended 2026-11-02 at the user's
+    request:** an upload counts as that tick — new files are shared at
+    once with every class the teacher teaches that subject to
+    (`_shareWithAll`, still through `Policy` → `ShareNote`); the teacher
+    unticks classes afterwards with Share with classes.
+  - Background note-quiz writing stays out of the brain while a learner
+    uses it: chat replies and every `HybridModelOrchestrator.runExclusive`
+    job (builders, labs) count, for `chatQuietFor` after they finish, and a
+    question yields between its two model calls. llama.cpp can't stop a
+    decode once started, so waiting is the only lever.
+  - A learner device asks the teacher for new materials every
+    `kAutoSyncEvery` (30 s) while the app is open and the teacher is
+    reachable (`LearnerSyncController`), not only when discovery changes.
   - Received notes are never served *as this device's own* (teacher role).
 - **Teacher-signed manifests.** Every channel (class+subject) carries the
   teacher's Ed25519 signature over school, class, subject, digest and a
@@ -695,6 +716,19 @@ Folders cut, deleted or pasted in Explorer show up on the next list.
     sees them.
   - The ☰ list picker runs the original guided questions and pure template
     build, with no model call.
+- **Instant first version (2026-11-02, at the user's request).** A
+  described app or website paints its ready-made template at once and is
+  saved; the coder's custom page is written in the background and swapped
+  into the same project folder when ready (with Undo), or offered with
+  "Use it" if the learner already changed the code. A build counter
+  (`_buildGen`) stops a late page landing on a newer build.
+- **App templates are interactive** (`assets/templates/apps/interactive_kit.*`,
+  added by `withInteractiveKit` in `_assembleAppHtml`): tabs and chips,
+  hearts, a working cart and checkout, real search, "+" adds an item, a
+  till on POS "Register", every bottom-bar icon opens its own screen
+  (saved, cart, profile with dark mode, stats, messages…), count-up numbers,
+  growing bars, ripples and confetti. Template pages only; model-written
+  pages don't get it. State is kept in `localStorage` per app, best effort.
 - **The project scaffold is never model-written.** The code lives in
   `lib/features/projects/scaffold/`.
   - It turns the builder's page into `frontend/` (split CSS/JS, embedded

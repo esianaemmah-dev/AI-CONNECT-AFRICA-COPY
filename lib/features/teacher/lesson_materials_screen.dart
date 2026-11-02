@@ -543,52 +543,40 @@ mixin _SubjectActions {
         if (allowed.contains(c.groupUuid))
           (uuid: c.groupUuid!, label: classLabel(c)),
     ];
-    if (classes.isNotEmpty && context.mounted) {
-      final share = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Materials are ready'),
-          content: const Text(
-            'Share with your class now? Quizzes can finish later.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Later'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Share with class'),
-            ),
-          ],
-        ),
-      );
-      if (share == true) {
-        for (final report in added) {
-          if (!context.mounted) break;
-          await _share(
-            context,
+    // Shared at once with every class this teacher teaches the subject to,
+    // so learners there get it on their next sync (every 30 s while
+    // connected) — the PDF opens right away; its text and quizzes follow
+    // as the background reader gets through it. Untick classes later with
+    // Share with classes.
+    final sharedWith = classes.isEmpty
+        ? const <String>[]
+        : await _shareWithAll(
             ref,
-            ResourceSummary(
-              resourceTitle: report.documentTitle,
-              subjectId: subject.subjectId,
-              topicKey: '',
-              termMarker: 0,
-              chunkCount: report.chunkCount,
-            ),
+            [for (final r in added) r.documentTitle],
             classes,
-            {},
           );
-        }
-      }
-    }
+    if (!context.mounted) return;
+    final shareLine = classes.isEmpty
+        ? tr(
+            context,
+            'Only on this device until the Admin assigns you this subject '
+            'for a class',
+          )
+        : sharedWith.isEmpty
+        ? null
+        : trFill(context, 'Shared with {classes}', {
+            'classes': sharedWith.join(', '),
+          });
     if (!context.mounted) return;
     if (added.length > 1) {
       _toast(
         context,
-        trFill(context, ResourceLabels.filesAdded, {
-          'count': '${added.length}',
-        }),
+        [
+          trFill(context, ResourceLabels.filesAdded, {
+            'count': '${added.length}',
+          }),
+          ?shareLine,
+        ].join(' · '),
       );
       return;
     }
@@ -609,6 +597,7 @@ mixin _SubjectActions {
         }),
       if (report.format == 'pdf' && !report.keptOriginal)
         tr(context, 'Text only — PDF too large to keep'),
+      ?shareLine,
     ];
     _toast(
       context,
@@ -772,6 +761,38 @@ mixin _SubjectActions {
 
   /// Which classes/streams receive this note when they sync. Only this
   /// subject's note goes, only to the ticked classes.
+  /// Shares each of [documentTitles] with every class in [classes] the
+  /// signed-in teacher may share it into ([Policy] still decides). Returns
+  /// the labels of the classes it went to.
+  Future<List<String>> _shareWithAll(
+    WidgetRef ref,
+    List<String> documentTitles,
+    List<({String uuid, String label})> classes,
+  ) async {
+    final policy = ref.read(policyProvider);
+    final me = TeacherActor(ref.read(activeTeacherIdProvider));
+    final dao = ref.read(dbProvider).classSyncDao;
+    final reached = <String>{};
+    for (final title in documentTitles) {
+      final to = <String>{
+        for (final c in classes)
+          if (await policy.can(me, ShareNote(subject.subjectId, title, c.uuid)))
+            c.uuid,
+      };
+      if (to.isEmpty) continue;
+      await dao.setShares(
+        subjectId: subject.subjectId,
+        documentTitle: title,
+        classUuids: to,
+      );
+      reached.addAll(to);
+    }
+    return [
+      for (final c in classes)
+        if (reached.contains(c.uuid)) c.label,
+    ];
+  }
+
   Future<void> _share(
     BuildContext context,
     WidgetRef ref,

@@ -311,6 +311,12 @@ class _TeacherDevicesCard extends ConsumerWidget {
               trailing: chevron,
               onTap: () => _changeMyPin(context, ref, me),
             ),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings_outlined),
+              title: const Text('Admin sign in'),
+              trailing: chevron,
+              onTap: () => context.push('/admin'),
+            ),
 
           ],
         ),
