@@ -96,7 +96,7 @@ void main() {
         overrides: [
           dbProvider.overrideWithValue(db),
           activeStudentProvider.overrideWith((ref) async => null),
-          learnerClassUuidProvider.overrideWith((ref) async => null),
+          learnerClassUuidProvider.overrideWith((ref) => Stream.value(null)),
           engineLoadedProvider.overrideWith((ref) async => engine),
         ],
       );
