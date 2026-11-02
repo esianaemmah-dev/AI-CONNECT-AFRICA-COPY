@@ -109,6 +109,10 @@ Rules:
     required String subject,
     String? topic,
     math.Random? random,
+
+    /// Checked before the second model call: true gives the brain back to
+    /// a learner, reported as [engineFailed] so the passage is retried.
+    bool Function()? yieldIf,
   }) async {
     final r = await tryPassage(passage, subject: subject, topic: topic);
     final q = r.question;
@@ -117,6 +121,7 @@ Rules:
     if (!groundedInPassage(shuffled, passage)) {
       return (question: null, engineFailed: false);
     }
+    if (yieldIf?.call() ?? false) return (question: null, engineFailed: true);
     final check = await answersFromPassage(shuffled, passage);
     if (check.engineFailed) return (question: null, engineFailed: true);
     return (question: check.agrees ? shuffled : null, engineFailed: false);

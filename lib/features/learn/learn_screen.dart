@@ -1,4 +1,3 @@
-import 'class_learning_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -290,8 +289,6 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
           maxWidth: 900,
           child: Column(
             children: [
-              if (!widget.programmingSubject && MediaQuery.viewInsetsOf(context).bottom == 0)
-                const ClassLearningPanel(),
             Expanded(
               child: chat.when(
                 loading: () => const Center(child: CircularProgressIndicator()),

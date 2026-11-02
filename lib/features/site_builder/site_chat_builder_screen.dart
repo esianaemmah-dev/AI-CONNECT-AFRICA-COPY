@@ -71,6 +71,14 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
   bool _showStudio = false;
   String _buildNote = '';
 
+  /// The coder is writing a custom page while the learner already has the
+  /// ready-made design on screen (see [_upgradeWithCoder]).
+  bool _upgrading = false;
+
+  /// Bumped by every build and wizard reset, so a custom page that arrives
+  /// late never lands on a newer site.
+  int _buildGen = 0;
+
   /// English form of the learner's description, when this build came from
   /// free text. Empty on the guided (pick-from-list) path.
   String _description = '';
@@ -204,6 +212,8 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
     _choosingColor = false;
     _description = '';
     _builtTitle = null;
+    _buildGen++;
+    _upgrading = false;
   }
 
   /// Free-text entry: the description is the whole spec. It is classified
@@ -632,7 +642,7 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
   /// Null when the model isn't installed, refuses, fails, or runs out of
   /// tokens before writing any visible content — the caller then falls back
   /// to the template for the classified site type.
-  Future<String?> _writeSiteWithCoder(SiteBuildIntent intent) async {
+  Future<String?> _writeSiteWithCoder(SiteBuildIntent intent, int gen) async {
     final coderOk = await promptAndFetchCoderPackage(context, ref);
     if (!coderOk || !mounted) return null;
     try {
@@ -640,11 +650,11 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
       final html = await AiCoderService(engine: engine).generateSiteHtml(
         intent: intent,
         onToken: (cumulative) {
-          if (!mounted) return;
+          if (!mounted || gen != _buildGen) return;
           setState(
             () => _buildNote = trFill(
               context,
-              'Writing your website… {n} characters so far',
+              'Writing a custom version… {n} characters so far',
               {'n': '${cumulative.length}'},
             ),
           );
@@ -658,12 +668,14 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
     }
   }
 
-  /// A described site is written by the coder model; a site picked from the
-  /// list maps the learner's answers straight onto its static template, with
-  /// no model call, so it paints in milliseconds.
+  /// Every site paints at once from its template, so the learner never
+  /// waits on the model. A described site then gets a custom page from the
+  /// coder in the background ([_upgradeWithCoder]); one picked from the list
+  /// needs no model call at all.
   Future<void> _buildSite() async {
     if (_template == null) return;
     if (!mounted) return;
+    final gen = ++_buildGen;
 
     setState(() {
       _building = true;
@@ -676,31 +688,23 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
 
     final intent = _currentIntent();
     final fromDescription = intent.description.isNotEmpty;
-    final generated = fromDescription
-        ? await _writeSiteWithCoder(intent)
-        : null;
-    var html =
-        generated ??
-        await _assembleTemplateHtml(
-          fromDescription ? _fallbackIntent(intent) : intent,
-        );
-    if (!mounted) return;
-
-    if (_pendingImages.isNotEmpty) {
-      html = applyPickedImages(
-        html,
-        _pendingImages,
-        heading: tr(context, 'Gallery'),
-      );
+    final images = _pendingImages;
+    var html = await _assembleTemplateHtml(
+      fromDescription ? _fallbackIntent(intent) : intent,
+    );
+    if (!mounted || gen != _buildGen) return;
+    if (images.isNotEmpty) {
+      html = applyPickedImages(html, images, heading: tr(context, 'Gallery'));
     }
     _codeController.text = html;
-    _builtTitle = fromDescription ? extractPageTitle(html) : null;
+    _builtTitle = null;
 
-    final ready = fromDescription && generated == null
+    final ready = fromDescription
         ? tr(
             context,
-            "I couldn't write a custom version this time, so I started you from "
-            'a ready-made design. Change it with the bar under the code. 🎉',
+            'Here is a first version to try straight away. I am writing a '
+            'custom one from your description and will swap it in when it is '
+            'ready. 🎉',
           )
         : tr(
             context,
@@ -713,12 +717,88 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
       _showStudio = true;
       _buildNote = '';
       _pendingImages = const [];
+      _upgrading = fromDescription;
       // The chat is ready for the next idea once this one is built.
       _choosingTemplate = true;
     });
     _scrollDown();
     // Every build is a project: saved straight away into Projects › Websites.
     await _saveToProjects();
+    if (fromDescription && mounted && gen == _buildGen) {
+      await _upgradeWithCoder(gen, intent, images, html);
+    }
+  }
+
+  /// Swaps the coder's page in for the ready-made [shown] one, into the
+  /// same project folder. If the learner already changed the code, it asks
+  /// first instead of overwriting their work.
+  Future<void> _upgradeWithCoder(
+    int gen,
+    SiteBuildIntent intent,
+    List<PickedImage> images,
+    String shown,
+  ) async {
+    final started = DateTime.now();
+    final generated = await _writeSiteWithCoder(intent, gen);
+    debugPrint(
+      'Site build: custom page '
+      '${generated == null ? 'not written' : 'written'} in '
+      '${DateTime.now().difference(started).inMilliseconds} ms',
+    );
+    if (!mounted || gen != _buildGen) return;
+    setState(() {
+      _upgrading = false;
+      _buildNote = '';
+    });
+    if (generated == null) {
+      showInstructionNoticeSnack(
+        context,
+        tr(
+          context,
+          "I couldn't write a custom version this time — keep going with "
+          'this design and change it with the bar under the code.',
+        ),
+      );
+      return;
+    }
+    var html = generated;
+    if (images.isNotEmpty) {
+      html = applyPickedImages(html, images, heading: tr(context, 'Gallery'));
+    }
+    void useIt() {
+      if (!mounted || gen != _buildGen) return;
+      _builtTitle = extractPageTitle(html);
+      _replaceCode(html, undo: _codeController.text);
+      setState(() {});
+    }
+
+    if (_codeController.text == shown) {
+      useIt();
+      showInstructionAppliedSnack(
+        context,
+        onUndo: _undoLastInstruction,
+        message: tr(context, 'Your custom website is ready.'),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              'Your custom website is ready. Using it replaces your changes.',
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 12),
+          action: SnackBarAction(
+            label: tr(context, 'Use it'),
+            onPressed: useIt,
+          ),
+        ),
+      );
   }
 
   @override
@@ -815,7 +895,7 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
             ),
           ],
 
-          if (_building)
+          if (_building || _upgrading)
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -829,9 +909,11 @@ class _SiteChatBuilderScreenState extends ConsumerState<SiteChatBuilderScreen> {
                   const SizedBox(width: 12),
                   Flexible(
                     child: Text(
-                      _buildNote.isEmpty
-                          ? tr(context, 'Building your site...')
-                          : _buildNote,
+                      _buildNote.isNotEmpty
+                          ? _buildNote
+                          : _upgrading
+                          ? tr(context, 'Writing a custom version of your website…')
+                          : tr(context, 'Building your site...'),
                       style: TextStyle(color: Theme.of(context).hintColor),
                     ),
                   ),

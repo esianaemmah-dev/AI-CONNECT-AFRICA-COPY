@@ -14,6 +14,7 @@ import '../../features/learn/subject_notes.dart';
 import '../custom_subject_service.dart';
 import '../assignments/class_assignments.dart';
 import '../offline_storage_service.dart';
+import '../hybrid_model_orchestrator.dart';
 import '../pdf/diagram_detector.dart';
 import '../learning/tutor_use.dart';
 import 'note_quiz_store.dart';
@@ -202,17 +203,12 @@ class NoteQuizBuilder {
       final r = await _ref.read(noteBackgroundWorkProvider).run(() async {
         // Chat may have started while this job waited behind a PDF page.
         // Release the slot and retry later rather than holding up extraction.
-        final busy = _ref.read(chatProvider).valueOrNull?.isGenerating ?? false;
-        final lastReply = _ref.read(tutorLastReplyProvider);
-        if (busy ||
-            (lastReply != null &&
-                DateTime.now().difference(lastReply) < chatQuietFor)) {
-          return null;
-        }
+        if (_foregroundRecently()) return null;
         return generator.checkedQuestion(
           readableNoteText(passage),
           subject: subject,
           topic: topic.title,
+          yieldIf: _foregroundBusy,
         );
       });
       if (r == null) return false;
@@ -276,10 +272,12 @@ class NoteQuizBuilder {
   Future<void> _chatIdle() async {
     DateTime? busyAt;
     while (true) {
-      final busy = _ref.read(chatProvider).valueOrNull?.isGenerating ?? false;
-      final lastReply = _ref.read(tutorLastReplyProvider);
-      if (busy) busyAt = DateTime.now();
-      final last = [busyAt, lastReply].whereType<DateTime>().fold<DateTime?>(
+      if (_foregroundBusy()) busyAt = DateTime.now();
+      final last = [
+        busyAt,
+        _ref.read(tutorLastReplyProvider),
+        HybridModelOrchestrator.instance.lastActive,
+      ].whereType<DateTime>().fold<DateTime?>(
         null,
         (a, b) => a == null || b.isAfter(a) ? b : a,
       );
@@ -288,6 +286,25 @@ class NoteQuizBuilder {
       }
       await Future<void>.delayed(const Duration(seconds: 1));
     }
+  }
+
+  /// The chat is answering, or a builder, lab or chat job holds the brain.
+  bool _foregroundBusy() =>
+      (_ref.read(chatProvider).valueOrNull?.isGenerating ?? false) ||
+      HybridModelOrchestrator.instance.busy;
+
+  /// [_foregroundBusy], or it was within [chatQuietFor]: the learner is
+  /// still using the AI, so a question written now would make them wait.
+  bool _foregroundRecently() {
+    if (_foregroundBusy()) return true;
+    final now = DateTime.now();
+    for (final t in [
+      _ref.read(tutorLastReplyProvider),
+      HybridModelOrchestrator.instance.lastActive,
+    ]) {
+      if (t != null && now.difference(t) < chatQuietFor) return true;
+    }
+    return false;
   }
 
   void dispose() => _retry?.cancel();

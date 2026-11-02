@@ -1,0 +1,115 @@
+/* OTIC app kit: motion and interaction for the App Builder's templates.
+   Added to every built app by the App Builder (see _assembleAppHtml). */
+html{scroll-behavior:smooth}
+.phone{transition:background .35s ease,color .35s ease}
+.ix-press{cursor:pointer;transition:transform .15s ease,box-shadow .2s ease,filter .2s ease;-webkit-tap-highlight-color:transparent}
+.ix-press:hover{filter:brightness(.97)}
+.ix-press:active{transform:scale(.97)}
+.ix-clip{overflow:hidden}
+.ix-ripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.18;transform:scale(0);animation:ixRipple .6s ease-out forwards}
+@keyframes ixRipple{to{transform:scale(2.6);opacity:0}}
+
+.ix-in{animation:ixUp .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes ixUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.ix-pop{animation:ixPop .45s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes ixPop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.ix-bump{animation:ixBump .35s ease}
+@keyframes ixBump{50%{transform:scale(1.35)}}
+.ix-shake{animation:ixShake .6s ease}
+@keyframes ixShake{20%{transform:rotate(-18deg)}40%{transform:rotate(14deg)}60%{transform:rotate(-9deg)}80%{transform:rotate(5deg)}}
+.ix-grow{transition:width 1.1s cubic-bezier(.2,.8,.2,1),height 1.1s cubic-bezier(.2,.8,.2,1)}
+.ix-hide{display:none!important}
+
+/* Selection that slides between tabs and chips */
+.ix-sel{transition:background .25s ease,color .25s ease,transform .2s ease}
+
+/* Feature checklist */
+.feat ul{padding-left:0}
+.feat li{cursor:pointer;transition:opacity .25s ease,background .25s ease}
+.feat li.ix-done{opacity:.55;text-decoration:line-through}
+.feat li.ix-done::before{content:'✔'!important;background:var(--primary)!important;color:#fff!important}
+
+/* Search that works */
+.ix-search{border:none;outline:none;background:transparent;font:inherit;color:var(--ink);flex:1;min-width:0}
+.ix-empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 10px}
+
+/* Badges */
+.ix-badge-host{position:relative}
+.ix-badge{position:absolute;top:-4px;right:calc(50% - 22px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;line-height:1;opacity:1!important}
+
+/* Screens opened from the bottom bar */
+.ix-screen{padding:6px 20px 20px;flex:1;animation:ixSlide .35s cubic-bezier(.2,.8,.2,1) both}
+@keyframes ixSlide{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.ix-screen h2.ix-title{font-size:20px;margin:6px 0 14px}
+.ix-list{display:flex;flex-direction:column;gap:10px}
+.ix-line{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--wash)}
+.ix-line .ix-ico{width:38px;height:38px;border-radius:12px;background:#fff;display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.ix-line .ix-t{flex:1;min-width:0;font-size:13px;font-weight:700}
+.ix-line .ix-s{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
+.ix-line .ix-r{font-size:13px;font-weight:800;color:var(--primary)}
+.ix-qty{display:flex;align-items:center;gap:6px}
+.ix-qty button{width:26px;height:26px;border-radius:8px;border:none;background:#fff;font-weight:800;cursor:pointer}
+.ix-total{display:flex;justify-content:space-between;font-weight:800;font-size:15px;margin:16px 2px 4px}
+.ix-row-toggle{display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid var(--line);border-radius:14px;font-size:13px;font-weight:600}
+.ix-switch{width:44px;height:26px;border-radius:13px;background:var(--line);position:relative;transition:background .25s ease;cursor:pointer;flex-shrink:0}
+.ix-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.ix-switch.on{background:var(--primary)}
+.ix-switch.on::after{transform:translateX(18px)}
+.ix-profile{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.ix-avatar{width:58px;height:58px;border-radius:18px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:800}
+.ix-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.ix-chips div{background:var(--wash);border-radius:14px;padding:12px;text-align:center}
+.ix-chips b{display:block;font-size:18px;color:var(--primary)}
+.ix-chips span{font-size:10px;color:var(--muted)}
+.ix-bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding:12px;background:var(--wash);border-radius:16px;margin-bottom:12px}
+.ix-bars i{flex:1;border-radius:8px 8px 4px 4px;background:var(--primary);height:0;transition:height 1s cubic-bezier(.2,.8,.2,1)}
+.ix-bars i:nth-child(even){opacity:.55}
+.ix-chat{display:flex;flex-direction:column;gap:8px;min-height:180px;margin-bottom:12px}
+.ix-msg{max-width:78%;padding:10px 13px;border-radius:16px;font-size:13px;line-height:1.4;animation:ixPop .3s ease both}
+.ix-msg.me{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:5px}
+.ix-msg.them{align-self:flex-start;background:var(--wash);border-bottom-left-radius:5px}
+.ix-typing{align-self:flex-start;color:var(--muted);font-size:12px;padding:4px 6px}
+
+/* Bottom sheet */
+.ix-back{position:fixed;inset:0;background:rgba(10,12,18,.45);opacity:0;transition:opacity .3s ease;z-index:50}
+.ix-back.on{opacity:1}
+.ix-sheet{position:fixed;left:50%;bottom:0;width:min(420px,100%);max-height:86vh;overflow:auto;background:#fff;color:var(--ink);border-radius:26px 26px 0 0;padding:10px 20px 24px;z-index:51;transform:translate(-50%,100%);transition:transform .38s cubic-bezier(.2,.9,.2,1);box-shadow:0 -12px 40px rgba(0,0,0,.18)}
+.ix-sheet.on{transform:translate(-50%,0)}
+.ix-grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.ix-hero{height:150px;border-radius:20px;background:linear-gradient(135deg,var(--primary),rgba(0,0,0,.08));display:grid;place-items:center;font-size:64px;margin-bottom:14px}
+.ix-sheet h3{font-size:19px;margin-bottom:4px}
+.ix-sheet .ix-sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+.ix-sheet .ix-price{font-size:22px;font-weight:800;color:var(--primary);margin-bottom:14px}
+.ix-actions{display:flex;gap:10px;margin-top:6px}
+.ix-btn{flex:1;border:none;border-radius:14px;padding:14px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;background:var(--primary);color:#fff;transition:transform .15s ease,filter .2s ease}
+.ix-btn:active{transform:scale(.97)}
+.ix-btn.ghost{background:var(--wash);color:var(--ink)}
+.ix-field{display:block;width:100%;border:1px solid var(--line);border-radius:12px;padding:13px 14px;font:inherit;font-size:14px;margin-bottom:10px;background:var(--wash);color:var(--ink);outline:none}
+.ix-field:focus{border-color:var(--primary)}
+.ix-progress{height:10px;border-radius:5px;background:var(--wash);overflow:hidden;margin:6px 0 14px}
+.ix-progress i{display:block;height:100%;width:0;background:var(--primary);border-radius:5px;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.ix-times{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ix-times span{padding:9px 13px;border-radius:999px;background:var(--wash);font-size:12px;font-weight:700;cursor:pointer}
+.ix-times span.on{background:var(--primary);color:#fff}
+.ix-keys{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ix-keys button{border:1px solid var(--line);background:var(--wash);border-radius:14px;padding:12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:left;color:var(--ink)}
+.ix-keys button span{display:block;font-size:22px;margin-bottom:4px}
+.ix-keys button small{display:block;color:var(--muted);font-weight:600;margin-top:2px}
+
+/* Toast and confetti */
+.ix-toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-140%);background:#15171c;color:#fff;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:700;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .35s cubic-bezier(.2,.9,.2,1);max-width:90vw;text-align:center}
+.ix-toast.on{transform:translate(-50%,0)}
+.ix-confetti{position:fixed;top:-12px;width:9px;height:14px;border-radius:2px;z-index:70;pointer-events:none;animation:ixFall linear forwards}
+@keyframes ixFall{to{transform:translate3d(var(--dx),105vh,0) rotate(var(--rot));opacity:.9}}
+.ix-heart-burst{position:fixed;pointer-events:none;font-size:22px;z-index:70;animation:ixFloat .9s ease-out forwards}
+@keyframes ixFloat{to{transform:translateY(-70px) scale(1.6);opacity:0}}
+
+/* Dark mode, switched on from Profile or Settings */
+html.ix-dark{--ink:#eceef3;--muted:#9aa2b1;--line:#2b303b;--wash:#222731}
+html.ix-dark body{background:#0d0f14}
+html.ix-dark .phone,html.ix-dark .ix-sheet{background:#171a21;color:var(--ink)}
+html.ix-dark .ix-line .ix-ico,html.ix-dark .ix-qty button{background:#2b303b;color:var(--ink)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}

@@ -329,6 +329,10 @@ Future<String?> _onboardingRedirect(Ref ref, String location) async {
   final name = prefs.getString('student_name');
   if (name != null && name.isNotEmpty) return null;
 
+  // The Admin section has its own PIN and needs no learner profile: a
+  // staff-only device must reach it before anyone has onboarded.
+  if (location == '/admin') return null;
+
   // On web there's no database — SharedPreferences is authoritative.
   if (kIsWeb) return '/onboarding';
 

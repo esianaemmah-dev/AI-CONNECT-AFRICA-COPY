@@ -283,20 +283,10 @@ void main() {
       );
     },
   );
-  test('Admin recovery requires a one-use code and revokes existing sessions', () async {
-    expect(await admin.recoverPin('5678'), isFalse);
-    final code = await admin.createRecoveryCode(s);
-    expect(await admin.recoverPin('5678', recoveryCode: 'wrong'), isFalse);
-    expect(await admin.recoverPin('5678', recoveryCode: code), isTrue);
-    expect(s.isValid, isFalse);
-    expect(() => admin.addClass(s, className: 'Forbidden'), throwsStateError);
-    final next = await admin.signIn('5678');
-    expect(next, isNotNull);
-    expect(await admin.recoverPin('9999', recoveryCode: code), isFalse);
+  test('the Admin PIN has no recovery code', () async {
     final row = (await db.select(db.adminIdentity).get()).single;
+    expect(row.recoveryHash, isNull);
     expect(row.pinPlain, isNull);
-    expect(row.recoveryHash, isNotNull, reason: 'recovery rotates at next authenticated sign-in');
-    expect(row.recoveryHash, isNot(admin.pendingRecoveryCode));
   });
 
   test('revoked Admin sessions and reset teacher credentials lose service access', () async {
@@ -307,7 +297,6 @@ void main() {
     expect(profiles.valid(amina), isFalse);
     s.lease.revoked = true;
     expect(() => admin.addLearner(s, name: 'Blocked'), throwsStateError);
-    expect(() => admin.createRecoveryCode(s), throwsStateError);
   });
 
 }

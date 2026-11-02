@@ -33,11 +33,24 @@ class OnlineTutor {
     // A school hub teaching a whole part of a topic on a laptop takes up to
     // about a minute; a server that is down fails at once.
     this.timeout = const Duration(seconds: 150),
+    this.headersTimeout = const Duration(seconds: 15),
+    this.chunkTimeout = const Duration(seconds: 45),
   }) : _client = client ?? http.Client();
 
   final String baseUrl;
   final String accessToken;
+
+  /// Whole answer from the JSON endpoint, which replies only when done.
   final Duration timeout;
+
+  /// Streaming: until the server answers at all. A server that is switched
+  /// off or out of Wi-Fi range hangs rather than refusing, so without this
+  /// the learner waited the whole [timeout] before the on-device tutor
+  /// took over.
+  final Duration headersTimeout;
+
+  /// Streaming: the longest gap between two pieces of the answer.
+  final Duration chunkTimeout;
   final http.Client _client;
 
   static const retryAfter = Duration(minutes: 1);
@@ -128,7 +141,7 @@ class OnlineTutor {
         if (accessToken.isNotEmpty) 'X-Otic-Tutor-Token': accessToken,
       })
       ..body = jsonEncode(body);
-    final response = await _client.send(request).timeout(timeout);
+    final response = await _client.send(request).timeout(headersTimeout);
     if (response.statusCode == 404 || response.statusCode == 405) {
       await response.stream.drain<void>();
       return (supported: false, reply: null);
@@ -143,7 +156,7 @@ class OnlineTutor {
       _failedAt = DateTime.now();
       return (supported: true, reply: null);
     }
-    await for (final line in response.stream.timeout(timeout)
+    await for (final line in response.stream.timeout(chunkTimeout)
         .transform(utf8.decoder).transform(const LineSplitter())) {
       if (!line.startsWith('data:')) continue;
       final event = jsonDecode(line.substring(5).trim()) as Map<String, dynamic>;

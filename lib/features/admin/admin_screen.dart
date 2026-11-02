@@ -30,30 +30,6 @@ class AdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(adminSessionProvider);
     final setUp = ref.watch(adminSetUpProvider).valueOrNull;
-    final service = ref.read(adminServiceProvider);
-    if (session != null && service.pendingRecoveryCode != null) {
-      final code = service.pendingRecoveryCode!;
-      service.pendingRecoveryCode = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('Save your recovery code'),
-            content: SelectableText(
-              'Keep this code privately. It is shown once.\n\n$code',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Saved'),
-              ),
-            ],
-          ),
-        );
-      });
-    }
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: const StudioAppBar(
@@ -262,49 +238,8 @@ class _SignInState extends ConsumerState<_SignIn> {
         ),
         const SizedBox(height: 16),
         FilledButton(onPressed: _submit, child: const Text('Sign in')),
-        TextButton(onPressed: _recover, child: const Text('Forgot PIN?')),
       ],
     );
-  }
-
-  /// Recovery: set a new Admin PIN, keeping every record. Deliberately not
-  /// behind the old PIN — the point is that it was forgotten. These PINs
-  /// keep people apart on a shared device, not real security.
-  Future<void> _recover() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final code = await _ask(context, 'Admin recovery code', '');
-    if (code == null || !mounted) return;
-    final next = await askTeacherPin(
-      context,
-      title: 'New Admin PIN (4–8 digits)',
-    );
-    if (next == null || !mounted) return;
-    final again = await askTeacherPin(context, title: 'New Admin PIN again');
-    if (again == null || !mounted) return;
-    if (again != next) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('The two PINs did not match.')),
-      );
-      return;
-    }
-    final session = await ref
-        .read(adminServiceProvider)
-        .recoverPin(next, recoveryCode: code);
-    if (!mounted) return;
-    if (!session) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Recovery code is incorrect, unavailable, or temporarily locked.',
-          ),
-        ),
-      );
-      return;
-    }
-    final signedIn = await ref.read(adminServiceProvider).signIn(next);
-    if (signedIn != null) {
-      ref.read(adminSessionProvider.notifier).state = signedIn;
-    }
   }
 }
 
@@ -443,38 +378,6 @@ class _Records extends ConsumerWidget {
               title: const Text('My PIN'),
               subtitle: const Text('Change your PIN'),
               onTap: () => _changeMyPin(context, ref),
-            ),
-            ListTile(
-              leading: const Icon(Icons.key_outlined),
-              title: const Text('Create recovery code'),
-              subtitle: const Text(
-                'Save it privately. Creating a code replaces the previous one.',
-              ),
-              onTap: () async {
-                final pin = await askTeacherPin(
-                  context,
-                  title: 'Confirm Admin PIN',
-                );
-                if (pin == null) return;
-                final verified = await admin.signIn(pin);
-                if (verified == null || !context.mounted) return;
-                session.lease.authenticatedAt = DateTime.now();
-                final code = await admin.createRecoveryCode(session);
-                if (!context.mounted) return;
-                await showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Save your recovery code'),
-                    content: SelectableText(code),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Saved'),
-                      ),
-                    ],
-                  ),
-                );
-              },
             ),
             ListTile(
               leading: const Icon(Icons.sync_rounded),

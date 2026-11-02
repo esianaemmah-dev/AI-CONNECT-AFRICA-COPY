@@ -22,6 +22,10 @@ enum LearnerSyncPhase {
   needsAttention,
 }
 
+/// How often a learner device asks its teacher for new materials while
+/// the app is open and the teacher is reachable.
+const kAutoSyncEvery = Duration(seconds: 30);
+
 /// One foreground discovery/transfer owner shared by every learner page.
 class LearnerSyncController extends ChangeNotifier {
   LearnerSyncController(this.ref, {this.managerFactory});
@@ -40,6 +44,7 @@ class LearnerSyncController extends ChangeNotifier {
   bool _alive = true, _foreground = true, _starting = false;
   int _generation = 0;
   DateTime? _lastAutomatic;
+  Timer? _poll;
   Future<SyncResult?>? _transfer;
   SelectiveSyncManager? _manager;
 
@@ -123,6 +128,13 @@ class LearnerSyncController extends ChangeNotifier {
       );
       await service.start();
       await _mdns!.startDiscovering();
+      // Discovery only speaks up when the peer list changes, so also ask
+      // the teacher every [kAutoSyncEvery]: a note shared after we found
+      // them arrives without anyone tapping "Get latest materials".
+      // Unchanged subjects are skipped by digest, so a poll is cheap.
+      _poll?.cancel();
+      if (!_alive || generation != _generation) return;
+      _poll = Timer.periodic(kAutoSyncEvery, (_) => _maybeAutoSync());
       _changed();
     } catch (_) {
       if (_alive && generation == _generation) {
@@ -137,12 +149,17 @@ class LearnerSyncController extends ChangeNotifier {
   void _changed() {
     if (!_alive || !_foreground) return;
     _emit();
+    _maybeAutoSync();
+  }
+
+  void _maybeAutoSync() {
+    if (!_alive || !_foreground) return;
     if (endpoints.isNotEmpty &&
         !busy &&
         phase != LearnerSyncPhase.waitingForApproval &&
         (_lastAutomatic == null ||
             DateTime.now().difference(_lastAutomatic!) >=
-                const Duration(seconds: 30))) {
+                kAutoSyncEvery)) {
       _lastAutomatic = DateTime.now();
       unawaited(sync());
     }
@@ -261,6 +278,8 @@ class LearnerSyncController extends ChangeNotifier {
   void _stop() {
     _generation++;
     _starting = false;
+    _poll?.cancel();
+    _poll = null;
     _manager?.dispose();
     _manager = null;
     for (final subscription in _subscriptions) {
