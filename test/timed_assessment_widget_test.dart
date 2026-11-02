@@ -66,6 +66,8 @@ void main() {
     expect(subs!.single.answer, 'Nucleus, ribosome');
     expect(subs.single.startedAt, isNotNull);
     await tester.pumpWidget(const SizedBox());
+    // Let cancelled Drift streams finish their zero-delay cleanup timers.
+    await tester.pump(Duration.zero);
   });
 
   testWidgets('New assignment shows type, times, limit and PDF', (

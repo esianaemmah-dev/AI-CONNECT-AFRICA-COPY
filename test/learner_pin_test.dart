@@ -3,12 +3,14 @@ import 'package:ai_connect_africa/features/learners/learner_pin.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late OticDatabase db;
   late LearnerPinService pins;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     db = OticDatabase.forTesting(DatabaseConnection(NativeDatabase.memory()));
     pins = LearnerPinService(db);
   });

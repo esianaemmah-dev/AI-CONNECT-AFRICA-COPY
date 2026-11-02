@@ -4,8 +4,10 @@ import 'package:ai_connect_africa/features/teacher/teacher_pin.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   test('a new PIN hash is tagged PBKDF2 and only its PIN matches', () async {
     pinHashInIsolate = true;
     addTearDown(() => pinHashInIsolate = false);

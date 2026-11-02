@@ -11,8 +11,8 @@ import '../notes/pdf_reader.dart';
 final newClassMaterialsProvider = FutureProvider.autoDispose<int>((ref) async {
   ref.watch(readingActivityProvider);
   final learner = await ref.watch(activeStudentProvider.future);
-  final subjects = await ref.watch(myNotesProvider.future);
   if (learner == null) return 0;
+  final subjects = await ref.watch(myNotesProvider.future);
   final prefs = await SharedPreferences.getInstance();
   return [
     for (final subject in subjects)
@@ -29,6 +29,7 @@ class ClassLearningPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final learner = ref.watch(activeStudentProvider).valueOrNull;
+    if (learner == null) return const SizedBox.shrink();
     final sync = ref.watch(learnerSyncProvider);
     final unread = ref.watch(newClassMaterialsProvider).valueOrNull ?? 0;
     final subjects = ref.watch(myNotesProvider).valueOrNull ?? [];
@@ -37,7 +38,6 @@ class ClassLearningPanel extends ConsumerWidget {
         for (final (pdf, here) in s.pdfs)
           if (here) pdf,
     ];
-    if (learner == null) return const SizedBox.shrink();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),

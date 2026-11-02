@@ -248,7 +248,8 @@ void main() {
       expect(await readable(), {'physics_9'},
           reason: 'a withdrawn enrolment no longer opens its notes');
       await db.classSyncDao.setEnrolled(id, 'maths_9', true);
-      expect(await readable(), {'maths_9', 'physics_9'});
+      expect(await readable(), {'physics_9'},
+          reason: 'a subject preference cannot reopen another class\'s notes');
     });
 
     test('deleting a learner deletes their enrolments', () async {

@@ -114,13 +114,14 @@ void main() {
     final rows = await db.select(db.auditLog).get();
     expect(rows.map((r) => r.action), [
       'admin.set_up',
+      'admin.recovery_rotated',
       'refused.admin_pin',
       'teacher.added',
       'learner.added',
       'learner.deleted',
     ]);
     final text = rows.map((r) => '${r.detail} ${r.action}').join(' ');
-    for (final secret in ['2468', '1111', '9876']) {
+    for (final secret in ['2468', '1111', '9876', admin.pendingRecoveryCode!]) {
       expect(text, isNot(contains(secret)));
     }
     expect(text, isNot(contains('Amina')), reason: 'learners by id only');
