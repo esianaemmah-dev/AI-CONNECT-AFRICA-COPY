@@ -2,9 +2,9 @@ import 'package:drift/drift.dart';
 
 import 'students_table.dart';
 
-/// Subjects a learner says they take — a record the teacher sees in Class
-/// progress. On a student device it also decides which subjects' notes
-/// (text and PDFs) the learner may read; lessons stay open to everyone.
+/// Subjects registered automatically when a teacher shares class materials
+/// and the learner joins or syncs. Reading access follows the current class;
+/// these records also keep the learner's subject history.
 @TableIndex(
   name: 'idx_learner_subjects_unique',
   columns: {#studentId, #subjectId},

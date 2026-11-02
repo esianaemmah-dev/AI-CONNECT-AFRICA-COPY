@@ -39,7 +39,7 @@ class TeachersScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: StudioAppBar(
-        title: tr(context, 'Teachers'),
+        title: tr(context, 'Staff access'),
         subtitle: tr(context, 'Sign in and teach'),
         icon: Icons.groups_rounded,
         iconColor: AppColors.accentBlue,
@@ -212,18 +212,8 @@ class _TeacherDevicesCard extends ConsumerWidget {
               title: Text('No teachers yet'),
               subtitle: Text('The Admin adds teachers'),
             ),
-          ListTile(
-            leading: const Icon(Icons.sync_rounded),
-            title: const Text('Sync'),
-            trailing: chevron,
-            onTap: () => context.push('/class-sync'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.cloud_outlined),
-            title: const Text('School cloud'),
-            trailing: chevron,
-            onTap: () => context.push('/teachers/cloud'),
-          ),
+          ListTile(leading: const Icon(Icons.admin_panel_settings_outlined), title: const Text('Admin sign in'), onTap: () => context.push('/admin')),
+
         ],
       );
     }
@@ -284,6 +274,7 @@ class _TeacherDevicesCard extends ConsumerWidget {
                 trailing: chevron,
                 onTap: () => context.push(path),
               ),
+            ListTile(leading: const Icon(Icons.cloud_outlined), title: const Text('School cloud'), onTap: () => context.push('/teachers/cloud')),
             SwitchListTile(
               secondary: const Icon(Icons.travel_explore_rounded),
               title: const Text('Look up topics online'),
@@ -320,12 +311,7 @@ class _TeacherDevicesCard extends ConsumerWidget {
               trailing: chevron,
               onTap: () => _changeMyPin(context, ref, me),
             ),
-            ListTile(
-              leading: const Icon(Icons.lock_outline_rounded),
-              title: const Text('Teachers PIN'),
-              trailing: chevron,
-              onTap: () => showTeacherPinSettings(context, ref),
-            ),
+
           ],
         ),
       ],

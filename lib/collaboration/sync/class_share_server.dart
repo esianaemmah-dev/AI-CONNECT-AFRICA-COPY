@@ -13,6 +13,7 @@ import '../../services/assignments/class_assignments.dart';
 import '../../services/assignments/learner_support.dart';
 import '../../services/notes/note_pdf_store.dart';
 import 'class_crypto.dart';
+import 'class_enrolment.dart';
 import 'device_keys.dart';
 import 'device_registry.dart';
 import 'failover_crypto.dart';
@@ -219,12 +220,16 @@ class ClassShareServer {
     this.role = ShareRole.teacher,
     this.joinRounds = kJoinKdfRounds,
     this.approvalTimeout = kJoinApprovalTimeout,
+    this.teacherId,
     NotePdfStore? pdfStore,
   }) : pdfStore = pdfStore ?? NotePdfStore(_db);
 
   final OticDatabase _db;
   late final DeviceRegistry _devices = DeviceRegistry(_db);
   final ShareRole role;
+
+  /// The signed-in teacher approving enrolments on this device.
+  final int? teacherId;
 
   /// Where the notes' original PDFs are read from.
   final NotePdfStore pdfStore;
@@ -375,8 +380,7 @@ class ClassShareServer {
     final code = newJoinCode();
     _codes[normalizeJoinCode(code)!] = _OpenCode(
       uuid,
-      DateTime.now().add(ttl),
-    );
+      DateTime.now().add(ttl));
     _failedJoins.clear();
     return code;
   }
@@ -506,7 +510,8 @@ class ClassShareServer {
         kAckPath when role == ShareRole.teacher => await _sync(request),
         kReportPath when role == ShareRole.teacher => await _sync(request),
         kStandbyPairPath when role == ShareRole.teacher =>
-          await _standbyPair(request),
+          await _standbyPair(request,
+        ),
         kStandbyLedgerPath when role == ShareRole.teacher =>
           await _standbyLedger(request),
         _ => _notFound(),
@@ -527,6 +532,15 @@ class ClassShareServer {
     final salt = body is Map ? body['nonce'] : null;
     final proof = body is Map ? body['proof'] : null;
     final rawName = body is Map ? body['name'] : null;
+    final learnerUuid = body is Map ? body['learner_uuid'] : null;
+    if (learnerUuid != null &&
+        (learnerUuid is! String ||
+            !RegExp(r'^[a-zA-Z0-9_-]{1,64}$').hasMatch(learnerUuid) ||
+            rawName is! String ||
+            rawName.trim().isEmpty ||
+            rawName.length > 80)) {
+      return _notFound();
+    }
     if (salt is! String || salt.length < 16 || proof is! String) {
       return _notFound();
     }
@@ -561,7 +575,16 @@ class ClassShareServer {
       final me = await _db.classSyncDao.identity();
       final Map<String, Object?> details;
       if (role == ShareRole.teacher) {
+        final enrolment = learnerUuid is String
+            ? await ClassEnrolment(_db).approve(
+                learnerUuid: learnerUuid,
+                name: rawName as String,
+                group: group,
+                teacherId: teacherId,
+              )
+            : null;
         details = {
+          'teacher_name': teacherId == null ? 'Your teacher' : (await (_db.select(_db.teacherProfiles)..where((t) => t.id.equals(teacherId!))).getSingleOrNull())?.name ?? 'Your teacher',
           'school_id': group.schoolId,
           'school_name': me.schoolName ?? '',
           'class_group_uuid': group.groupUuid,
@@ -569,6 +592,14 @@ class ClassShareServer {
           'stream_name': group.streamName,
           'class_key': group.classKey,
           'teacher_public_key': await signingPublicKey(me.signingSeed),
+          'shared_subjects': await _db.classSyncDao.sharedSubjects(
+            group.groupUuid!,
+          ),
+          if (enrolment != null) ...{
+            'learner_uuid': learnerUuid,
+            'enrolment_uuid': enrolment.uuid,
+            'academic_year': enrolment.academicYear,
+          },
           // So a brand-new student already has a cached roster before its
           // first sync, even one against a co-teacher's device — see
           // SelectiveSyncManager's bootstrap handling.
@@ -761,7 +792,8 @@ class ClassShareServer {
     if (standbyKey == null || nonce == null || nonce.length < 16 || sig == null) {
       return _notFound();
     }
-    final paired = await (_db.select(_db.failoverStandbys)
+    final paired = await (_db.select(_db.failoverStandbys,
+    )
           ..where((t) => t.publicKey.equals(standbyKey)))
         .getSingleOrNull();
     if (paired == null) return _notFound();
@@ -779,9 +811,11 @@ class ClassShareServer {
     if (ledger == null) return _notFound();
     final me = await _db.classSyncDao.identity();
     final ledgerJson = jsonEncode(ledger);
-    await (_db.update(_db.failoverStandbys)
+    await (_db.update(_db.failoverStandbys,
+    )
           ..where((t) => t.id.equals(paired.id)))
-        .write(FailoverStandbysCompanion(lastMirroredAt: Value(DateTime.now())));
+        .write(FailoverStandbysCompanion(lastMirroredAt: Value(DateTime.now())),
+    );
     return _json({
       'ledger_json': ledgerJson,
       'sig': await signLedgerReply(
@@ -857,7 +891,8 @@ class ClassShareServer {
       kHandshakePath => await _handshake(served),
       // A co-teacher device never receives progress reports — root only.
       kReportPath when !served.isDelegate =>
-        await _report(served, classKey, nonce, body['report']),
+        await _report(served, classKey, nonce, body['report'],
+      ),
       kReportPath => null,
       kFilePath => await _noteFile(
         served,
@@ -937,7 +972,8 @@ class ClassShareServer {
         json: {
           'rekey': await sealToDevice(
             recipientBoxKey: boxKey,
-            json: {'class_uuid': served.groupUuid, 'class_key': served.classKey},
+            json: {'class_uuid': served.groupUuid, 'class_key': served.classKey,
+            },
           ),
         },
       ),
@@ -1028,7 +1064,8 @@ class ClassShareServer {
       if (role == ShareRole.teacher && !served.isDelegate)
         'catalog': [
           for (final s in await dao.ownSubjects(classUuid: uuid))
-            {'id': s.subjectId, 'name': s.name, 'icon': s.icon, 'color': s.color},
+            {'id': s.subjectId, 'name': s.name, 'icon': s.icon, 'color': s.color,
+            },
         ],
       // Forwarded verbatim, whichever device this reply comes from — its
       // own signature is what makes it trustworthy, not who's relaying it.
@@ -1080,10 +1117,10 @@ class ClassShareServer {
       );
     }
     // Extra help for exactly the learners that device reported.
-    final support = await LearnerSupportService(_db).outgoing(
+    final support = await LearnerSupportService(_db,
+    ).outgoing(
       served.groupUuid,
-      [for (final r in reports) r.memberKey],
-    );
+      [for (final r in reports) r.memberKey]);
     return {
       'saved': reports.length,
       'grades': [for (final g in grades) g.toJson()],

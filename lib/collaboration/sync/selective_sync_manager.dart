@@ -12,6 +12,7 @@ import '../../db/otic_database.dart';
 import '../../services/assignments/class_assignments.dart';
 import '../../services/assignments/learner_support.dart';
 import 'class_crypto.dart';
+import 'class_enrolment.dart';
 import 'device_keys.dart';
 import 'device_registry.dart';
 import 'class_share_server.dart'
@@ -240,8 +241,7 @@ class SelectiveSyncManager {
             s.destroy();
             return true;
           },
-          onError: (_) => false,
-        ),
+          onError: (_) => false),
     ]);
     return [
       for (var i = 0; i < candidates.length; i++)
@@ -257,8 +257,9 @@ class SelectiveSyncManager {
   Future<Map<String, Object?>?> _requestJoin(
     List<TeacherEndpoint> endpoints,
     String code,
-    String name,
-  ) async {
+    String name, {
+    String? learnerUuid,
+  }) async {
     final salt = newNonce();
     final secret = await joinSecret(code, salt, rounds: joinRounds);
     final proof = await joinProof(secret, salt);
@@ -273,6 +274,7 @@ class SelectiveSyncManager {
                 'nonce': salt,
                 'proof': proof,
                 'name': name,
+                if (learnerUuid != null) 'learner_uuid': learnerUuid,
                 ...keys,
               }),
             )
@@ -296,6 +298,8 @@ class SelectiveSyncManager {
     required List<TeacherEndpoint> teachers,
     required String typedCode,
     String name = '',
+    int? studentId,
+    Future<bool> Function(String className, String schoolName, String teacherName)? confirmClass,
   }) async {
     final code = normalizeJoinCode(typedCode);
     if (code == null) {
@@ -308,14 +312,59 @@ class SelectiveSyncManager {
         'No teacher is sharing a class on this Wi-Fi right now.',
       );
     }
-    final bundle = await _requestJoin(teachers, code, name);
+    final enrolments = ClassEnrolment(_db);
+    final learner = studentId == null
+        ? null
+        : await _db.studentDao.getStudentById(studentId);
+    if (studentId != null && learner == null) {
+      return const JoinResult.failed('Choose a learner first.');
+    }
+    final uuid = studentId == null
+        ? null
+        : await enrolments.learnerUuid(studentId);
+    final bundle = await _requestJoin(
+      teachers,
+      code,
+      learner?.name ?? name,
+      learnerUuid: uuid,
+    );
     if (bundle == null) {
       return const JoinResult.failed(
         'You weren’t let in. Check the code, that it hasn’t expired, and that '
         'your teacher tapped Accept.',
       );
     }
-    return _acceptBundle(bundle);
+    if (bundle['learner_uuid'] != null && bundle['learner_uuid'] != uuid) {
+      return const JoinResult.failed('The approval is for another learner.');
+    }
+    if (confirmClass != null && !await confirmClass(
+      bundle['class_name'] is String ? bundle['class_name'] as String : '',
+      bundle['school_name'] is String ? bundle['school_name'] as String : '',
+      bundle['teacher_name'] is String ? bundle['teacher_name'] as String : 'Your teacher',
+    )) return const JoinResult.failed('Joining cancelled.');
+    final result = await _acceptBundle(bundle);
+    if (result.ok && studentId != null) {
+      await enrolments.enrol(
+        studentId: studentId,
+        group: result.group!,
+        enrolmentUuid: bundle['enrolment_uuid'] is String
+            ? bundle['enrolment_uuid'] as String
+            : null,
+        academicYear: bundle['academic_year'] is int
+            ? bundle['academic_year'] as int
+            : null,
+      );
+      if (bundle['shared_subjects'] case final List subjects) {
+        await _db.classSyncDao.registerClassSubjects(
+          result.group!.groupUuid!,
+          subjects.whereType<String>().where(
+            (id) => RegExp(r'^[a-z0-9_]{1,60}$').hasMatch(id),
+          ),
+          studentId: studentId,
+        );
+      }
+    }
+    return result;
   }
 
   Future<JoinResult> _acceptBundle(Map<String, Object?> b) async {
@@ -683,7 +732,8 @@ class SelectiveSyncManager {
           if (r.ok)
             ...r.rejected
           else
-            RejectedChunk(reason: r.error ?? 'a teacher device could not be reached'),
+            RejectedChunk(reason: r.error ?? 'a teacher device could not be reached',
+            ),
       ],
     );
   }
@@ -716,9 +766,14 @@ class SelectiveSyncManager {
         classKey == null ||
         rootKey == null ||
         schoolId == null) {
-      return SyncResult.failed('Join this class with your teacher’s code first.');
+      return SyncResult.failed('Join this class with your teacher’s code first.',
+      );
     }
-    var roster = _decodeCachedRoster(group, schoolId: schoolId, classUuid: uuid);
+    var roster = _decodeCachedRoster(
+      group,
+      schoolId: schoolId,
+      classUuid: uuid,
+    );
     final candidateKeys = <String>{
       rootKey,
       ...?roster?.entries.map((e) => e.publicKey),
@@ -755,7 +810,8 @@ class SelectiveSyncManager {
           }
         }
         throw lastError ??
-            const SyncTrustError('reply is not signed by a key this class trusts');
+            const SyncTrustError('reply is not signed by a key this class trusts',
+            );
       },
     );
 
@@ -1001,7 +1057,8 @@ class SelectiveSyncManager {
           ),
         );
 
-    var roster = _decodeCachedRoster(group, schoolId: schoolId, classUuid: uuid);
+    var roster = _decodeCachedRoster(group, schoolId: schoolId, classUuid: uuid,
+    );
     final List<ChannelManifest> manifests;
     try {
       final hello = await call(kHandshakePath, {'school_id': schoolId});
@@ -1211,6 +1268,7 @@ class SelectiveSyncManager {
         }
       }
     }
+    await dao.registerMaterialSubjects(uuid);
     return (updated: updated, inserted: inserted, rejected: rejected);
   }
 

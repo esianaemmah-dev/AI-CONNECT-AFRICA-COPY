@@ -11,13 +11,16 @@ import '../../shared/widgets/studio_page.dart';
 import '../learn/subject_notes.dart';
 import 'note_access.dart';
 import 'pdf_reader.dart';
+import '../teacher/teacher_pin.dart';
 
 /// Opens [pdf] at [page] (1-based) — e.g. from the tutor's "see page 14".
 /// Without a page it reopens where the reader left off.
 void openNotePdf(BuildContext context, NotePdf pdf, {int? page}) {
   context.push(
     Uri(
-      path: '/note-pdf',
+      path: isTeacherRoute(GoRouterState.of(context).uri.path)
+          ? '/teacher/note-pdf'
+          : '/note-pdf',
       queryParameters: {
         'sha': pdf.sha256,
         'title': pdf.documentTitle,
@@ -85,6 +88,7 @@ final notePdfPathProvider = FutureProvider.autoDispose.family<String?, String>((
   ref,
   sha,
 ) async {
+  ref.watch(noteResourcesRevisionProvider);
   await pdfrxFlutterInitialize();
   return (await ref.read(notePdfStoreProvider).fileFor(sha))?.path;
 });

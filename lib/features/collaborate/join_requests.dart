@@ -9,9 +9,12 @@ import '../../shared/widgets/studio_page.dart';
 /// Nothing is handed over until Accept is tapped; unanswered requests time
 /// out on their own.
 class JoinRequestsCard extends StatelessWidget {
-  const JoinRequestsCard({super.key, required this.server, this.subjectName});
+  const JoinRequestsCard({super.key, required this.server, this.subjectName,
+    this.className,
+  });
 
   final ClassShareServer server;
+  final String? className;
 
   /// Turns a subject id into its display name, for a co-teacher request's
   /// "would teach" line. Falls back to the id itself.
@@ -51,8 +54,7 @@ class JoinRequestsCard extends StatelessWidget {
                           PendingJoinKind.student =>
                             Icons.person_outline_rounded,
                         },
-                        size: 20,
-                      ),
+                        size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -63,6 +65,15 @@ class JoinRequestsCard extends StatelessWidget {
                                   ? p.name
                                   : '${p.name} · ${p.address}',
                               style: TextStyle(color: ac.textPrimary),
+                            ),
+                            if (p.kind == PendingJoinKind.student &&
+                                className != null)
+                              Text(
+                                'Wants to join $className',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: ac.textSecondary,
+                                ),
                             ),
                             if (p.kind == PendingJoinKind.standby)
                               Text(
@@ -90,7 +101,11 @@ class JoinRequestsCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       FilledButton(
                         onPressed: () => server.decide(p.id, accept: true),
-                        child: const Text('Accept'),
+                        child: Text(
+                          p.kind == PendingJoinKind.student && className != null
+                              ? 'Enrol learner'
+                              : 'Accept',
+                        ),
                       ),
                     ],
                   ),

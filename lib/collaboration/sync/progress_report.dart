@@ -307,9 +307,10 @@ Future<ProgressReport> _reportFor(
     topics: [for (final p in progress) (topic: p.topic, level: p.level)],
     strengths: _list(s.strengthsJson),
     weaknesses: _list(s.weaknessesJson),
-    enrolled: (await db.classSyncDao.enrolledSubjects(
-      s.id,
-    )).take(ProgressReport.maxEnrolled).toList(),
+    enrolled: (await db.classSyncDao.watchReadable(s.id).first)
+            .take(ProgressReport.maxEnrolled)
+            .toList()
+          ..sort(),
     submissions: group.groupUuid == null
         ? const []
         : await ClassAssignments(db).outgoing(s.id, group.groupUuid!),

@@ -14575,6 +14575,28 @@ class $AdminIdentityTable extends AdminIdentity
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AdminIdentityTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _recoverySaltMeta = const VerificationMeta(
+    'recoverySalt',
+  );
+  @override
+  late final GeneratedColumn<String> recoverySalt = GeneratedColumn<String>(
+    'recovery_salt',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _recoveryHashMeta = const VerificationMeta(
+    'recoveryHash',
+  );
+  @override
+  late final GeneratedColumn<String> recoveryHash = GeneratedColumn<String>(
+    'recovery_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -14662,6 +14684,8 @@ class $AdminIdentityTable extends AdminIdentity
   );
   @override
   List<GeneratedColumn> get $columns => [
+    recoverySalt,
+    recoveryHash,
     id,
     name,
     pinSalt,
@@ -14683,6 +14707,24 @@ class $AdminIdentityTable extends AdminIdentity
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('recovery_salt')) {
+      context.handle(
+        _recoverySaltMeta,
+        recoverySalt.isAcceptableOrUnknown(
+          data['recovery_salt']!,
+          _recoverySaltMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recovery_hash')) {
+      context.handle(
+        _recoveryHashMeta,
+        recoveryHash.isAcceptableOrUnknown(
+          data['recovery_hash']!,
+          _recoveryHashMeta,
+        ),
+      );
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
@@ -14751,6 +14793,14 @@ class $AdminIdentityTable extends AdminIdentity
   AdminIdentityRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return AdminIdentityRow(
+      recoverySalt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recovery_salt'],
+      ),
+      recoveryHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recovery_hash'],
+      ),
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
@@ -14794,6 +14844,8 @@ class $AdminIdentityTable extends AdminIdentity
 
 class AdminIdentityRow extends DataClass
     implements Insertable<AdminIdentityRow> {
+  final String? recoverySalt;
+  final String? recoveryHash;
   final int id;
   final String name;
 
@@ -14815,6 +14867,8 @@ class AdminIdentityRow extends DataClass
   /// Version of the last bundle sent; each send goes one higher.
   final int recordsVersion;
   const AdminIdentityRow({
+    this.recoverySalt,
+    this.recoveryHash,
     required this.id,
     required this.name,
     required this.pinSalt,
@@ -14827,6 +14881,12 @@ class AdminIdentityRow extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || recoverySalt != null) {
+      map['recovery_salt'] = Variable<String>(recoverySalt);
+    }
+    if (!nullToAbsent || recoveryHash != null) {
+      map['recovery_hash'] = Variable<String>(recoveryHash);
+    }
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['pin_salt'] = Variable<String>(pinSalt);
@@ -14844,6 +14904,12 @@ class AdminIdentityRow extends DataClass
 
   AdminIdentityCompanion toCompanion(bool nullToAbsent) {
     return AdminIdentityCompanion(
+      recoverySalt: recoverySalt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recoverySalt),
+      recoveryHash: recoveryHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recoveryHash),
       id: Value(id),
       name: Value(name),
       pinSalt: Value(pinSalt),
@@ -14865,6 +14931,8 @@ class AdminIdentityRow extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AdminIdentityRow(
+      recoverySalt: serializer.fromJson<String?>(json['recoverySalt']),
+      recoveryHash: serializer.fromJson<String?>(json['recoveryHash']),
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       pinSalt: serializer.fromJson<String>(json['pinSalt']),
@@ -14879,6 +14947,8 @@ class AdminIdentityRow extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'recoverySalt': serializer.toJson<String?>(recoverySalt),
+      'recoveryHash': serializer.toJson<String?>(recoveryHash),
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'pinSalt': serializer.toJson<String>(pinSalt),
@@ -14891,6 +14961,8 @@ class AdminIdentityRow extends DataClass
   }
 
   AdminIdentityRow copyWith({
+    Value<String?> recoverySalt = const Value.absent(),
+    Value<String?> recoveryHash = const Value.absent(),
     int? id,
     String? name,
     String? pinSalt,
@@ -14900,6 +14972,8 @@ class AdminIdentityRow extends DataClass
     Value<String?> signingSeed = const Value.absent(),
     int? recordsVersion,
   }) => AdminIdentityRow(
+    recoverySalt: recoverySalt.present ? recoverySalt.value : this.recoverySalt,
+    recoveryHash: recoveryHash.present ? recoveryHash.value : this.recoveryHash,
     id: id ?? this.id,
     name: name ?? this.name,
     pinSalt: pinSalt ?? this.pinSalt,
@@ -14911,6 +14985,12 @@ class AdminIdentityRow extends DataClass
   );
   AdminIdentityRow copyWithCompanion(AdminIdentityCompanion data) {
     return AdminIdentityRow(
+      recoverySalt: data.recoverySalt.present
+          ? data.recoverySalt.value
+          : this.recoverySalt,
+      recoveryHash: data.recoveryHash.present
+          ? data.recoveryHash.value
+          : this.recoveryHash,
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       pinSalt: data.pinSalt.present ? data.pinSalt.value : this.pinSalt,
@@ -14929,6 +15009,8 @@ class AdminIdentityRow extends DataClass
   @override
   String toString() {
     return (StringBuffer('AdminIdentityRow(')
+          ..write('recoverySalt: $recoverySalt, ')
+          ..write('recoveryHash: $recoveryHash, ')
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('pinSalt: $pinSalt, ')
@@ -14943,6 +15025,8 @@ class AdminIdentityRow extends DataClass
 
   @override
   int get hashCode => Object.hash(
+    recoverySalt,
+    recoveryHash,
     id,
     name,
     pinSalt,
@@ -14956,6 +15040,8 @@ class AdminIdentityRow extends DataClass
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AdminIdentityRow &&
+          other.recoverySalt == this.recoverySalt &&
+          other.recoveryHash == this.recoveryHash &&
           other.id == this.id &&
           other.name == this.name &&
           other.pinSalt == this.pinSalt &&
@@ -14967,6 +15053,8 @@ class AdminIdentityRow extends DataClass
 }
 
 class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
+  final Value<String?> recoverySalt;
+  final Value<String?> recoveryHash;
   final Value<int> id;
   final Value<String> name;
   final Value<String> pinSalt;
@@ -14976,6 +15064,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
   final Value<String?> signingSeed;
   final Value<int> recordsVersion;
   const AdminIdentityCompanion({
+    this.recoverySalt = const Value.absent(),
+    this.recoveryHash = const Value.absent(),
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.pinSalt = const Value.absent(),
@@ -14986,6 +15076,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
     this.recordsVersion = const Value.absent(),
   });
   AdminIdentityCompanion.insert({
+    this.recoverySalt = const Value.absent(),
+    this.recoveryHash = const Value.absent(),
     this.id = const Value.absent(),
     required String name,
     required String pinSalt,
@@ -14999,6 +15091,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
        pinHash = Value(pinHash),
        createdAt = Value(createdAt);
   static Insertable<AdminIdentityRow> custom({
+    Expression<String>? recoverySalt,
+    Expression<String>? recoveryHash,
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? pinSalt,
@@ -15009,6 +15103,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
     Expression<int>? recordsVersion,
   }) {
     return RawValuesInsertable({
+      if (recoverySalt != null) 'recovery_salt': recoverySalt,
+      if (recoveryHash != null) 'recovery_hash': recoveryHash,
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (pinSalt != null) 'pin_salt': pinSalt,
@@ -15021,6 +15117,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
   }
 
   AdminIdentityCompanion copyWith({
+    Value<String?>? recoverySalt,
+    Value<String?>? recoveryHash,
     Value<int>? id,
     Value<String>? name,
     Value<String>? pinSalt,
@@ -15031,6 +15129,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
     Value<int>? recordsVersion,
   }) {
     return AdminIdentityCompanion(
+      recoverySalt: recoverySalt ?? this.recoverySalt,
+      recoveryHash: recoveryHash ?? this.recoveryHash,
       id: id ?? this.id,
       name: name ?? this.name,
       pinSalt: pinSalt ?? this.pinSalt,
@@ -15045,6 +15145,12 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (recoverySalt.present) {
+      map['recovery_salt'] = Variable<String>(recoverySalt.value);
+    }
+    if (recoveryHash.present) {
+      map['recovery_hash'] = Variable<String>(recoveryHash.value);
+    }
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
@@ -15075,6 +15181,8 @@ class AdminIdentityCompanion extends UpdateCompanion<AdminIdentityRow> {
   @override
   String toString() {
     return (StringBuffer('AdminIdentityCompanion(')
+          ..write('recoverySalt: $recoverySalt, ')
+          ..write('recoveryHash: $recoveryHash, ')
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('pinSalt: $pinSalt, ')
@@ -30733,6 +30841,8 @@ typedef $$TeacherProfilesTableProcessedTableManager =
     >;
 typedef $$AdminIdentityTableCreateCompanionBuilder =
     AdminIdentityCompanion Function({
+      Value<String?> recoverySalt,
+      Value<String?> recoveryHash,
       Value<int> id,
       required String name,
       required String pinSalt,
@@ -30744,6 +30854,8 @@ typedef $$AdminIdentityTableCreateCompanionBuilder =
     });
 typedef $$AdminIdentityTableUpdateCompanionBuilder =
     AdminIdentityCompanion Function({
+      Value<String?> recoverySalt,
+      Value<String?> recoveryHash,
       Value<int> id,
       Value<String> name,
       Value<String> pinSalt,
@@ -30763,6 +30875,16 @@ class $$AdminIdentityTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get recoverySalt => $composableBuilder(
+    column: $table.recoverySalt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recoveryHash => $composableBuilder(
+    column: $table.recoveryHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -30813,6 +30935,16 @@ class $$AdminIdentityTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get recoverySalt => $composableBuilder(
+    column: $table.recoverySalt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recoveryHash => $composableBuilder(
+    column: $table.recoveryHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -30863,6 +30995,16 @@ class $$AdminIdentityTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get recoverySalt => $composableBuilder(
+    column: $table.recoverySalt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recoveryHash => $composableBuilder(
+    column: $table.recoveryHash,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -30927,6 +31069,8 @@ class $$AdminIdentityTableTableManager
               $$AdminIdentityTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String?> recoverySalt = const Value.absent(),
+                Value<String?> recoveryHash = const Value.absent(),
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> pinSalt = const Value.absent(),
@@ -30936,6 +31080,8 @@ class $$AdminIdentityTableTableManager
                 Value<String?> signingSeed = const Value.absent(),
                 Value<int> recordsVersion = const Value.absent(),
               }) => AdminIdentityCompanion(
+                recoverySalt: recoverySalt,
+                recoveryHash: recoveryHash,
                 id: id,
                 name: name,
                 pinSalt: pinSalt,
@@ -30947,6 +31093,8 @@ class $$AdminIdentityTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String?> recoverySalt = const Value.absent(),
+                Value<String?> recoveryHash = const Value.absent(),
                 Value<int> id = const Value.absent(),
                 required String name,
                 required String pinSalt,
@@ -30956,6 +31104,8 @@ class $$AdminIdentityTableTableManager
                 Value<String?> signingSeed = const Value.absent(),
                 Value<int> recordsVersion = const Value.absent(),
               }) => AdminIdentityCompanion.insert(
+                recoverySalt: recoverySalt,
+                recoveryHash: recoveryHash,
                 id: id,
                 name: name,
                 pinSalt: pinSalt,

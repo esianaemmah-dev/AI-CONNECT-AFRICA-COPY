@@ -48,6 +48,11 @@ import '../../shared/widgets/app_shell.dart';
 final _rootKey = GlobalKey<NavigatorState>();
 final _shellKey = GlobalKey<NavigatorState>();
 
+/// Recovery codes and other staff dialogs must disappear when staff locks.
+void dismissStaffOverlays() {
+  _rootKey.currentState?.popUntil((route) => route.isFirst);
+}
+
 /// The screen navigated to just before this one, so the gate can tell
 /// opening Teachers/Admin afresh from the unlock flow returning to it.
 String? _lastRouterLocation;
@@ -70,6 +75,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // so a return from /unlock must not re-lock.
       final prev = _lastRouterLocation;
       _lastRouterLocation = path;
+      // Outside the PIN-protected teacher area, the active learner is
+      // using the app. Do not carry teacher privileges into learner pages.
+      if (!isTeacherRoute(path) && path != '/unlock') {
+        ref.read(teacherUnlockedProvider.notifier).state = false;
+        ref.read(activeTeacherProvider.notifier).state = null;
+      }
+      if (path != '/admin') {
+        ref.read(adminSessionProvider.notifier).state = null;
+      }
       if (path == '/teachers' &&
           prev != '/unlock' &&
           (prev == null || !isTeacherRoute(prev))) {
@@ -81,16 +95,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // Teachers sits behind the Teachers PIN, when one is set…
       if (!isTeacherRoute(path)) return null;
-      final gate = teacherGateRedirect(
-        state.uri,
-        unlocked: ref.read(teacherUnlockedProvider),
-        pinSet: await ref.read(teacherPinProvider).isSet(),
-      );
-      if (gate != null) return gate;
-      // …and the teacher tools need a teacher signed in, on any device.
       return teacherProfileRedirect(
         state.uri,
-        signedIn: kIsWeb || ref.read(activeTeacherProvider) != null,
+        signedIn: kIsWeb || (ref.read(activeTeacherProvider) != null && ref.read(teacherProfileServiceProvider).valid(ref.read(activeTeacherProvider)!.id)),
       );
     },
     routes: [
@@ -156,8 +163,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const TeacherSyncScreen(),
           ),
           // Co-teaching and standby screens were removed (2026-10-06).
-          GoRoute(path: '/teacher/co-teach', redirect: (_, __) => '/teacher/sync'),
-          GoRoute(path: '/teacher/standby', redirect: (_, __) => '/teacher/sync'),
+          GoRoute(path: '/teacher/co-teach', redirect: (_, __) => '/teacher/sync',
+          ),
+          GoRoute(path: '/teacher/standby', redirect: (_, __) => '/teacher/sync',
+          ),
           GoRoute(
             path: '/learn/subject/:id',
             builder: (_, state) =>
@@ -212,8 +221,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/my-notes',
-            builder: (_, __) => const MyNotesScreen(),
-          ),
+            builder: (_, __) => const MyNotesScreen()),
           // Student side of class sync — deliberately outside /teacher*, so
           // no teacher PIN: the join code is what grants access.
           GoRoute(
@@ -252,6 +260,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/teacher/note-pdf',
+            builder: (_, state) => NotePdfScreen(
+              sha256: state.uri.queryParameters['sha'] ?? '',
+              title: state.uri.queryParameters['title'] ?? '',
+              initialPage:
+                  int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 0,
+            ),
+          ),
+          GoRoute(
             path: '/teachers',
             builder: (_, __) => const TeachersScreen(),
           ),
@@ -262,8 +279,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin',
-            builder: (_, __) => const AdminScreen(),
-          ),
+            builder: (_, __) => const AdminScreen()),
           GoRoute(
             path: '/assignments',
             builder: (_, __) => const AssignmentsScreen(),
@@ -286,6 +302,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/unlock',
+        redirect: (_, __) => '/teachers',
             builder: (_, state) {
               final to = state.uri.queryParameters['to'] ?? '/teacher';
               // Only ever continue into the gated area, never to an
@@ -319,7 +336,8 @@ Future<String?> _onboardingRedirect(Ref ref, String location) async {
   // themselves here yet: ask who is learning rather than opening someone
   // else's profile. Teachers and the Admin can still work.
   if (prefs.getInt(kActiveStudentIdKey) == null &&
-      !const ['/learners', '/teachers', '/admin', '/unlock'].contains(location) &&
+      !const ['/learners', '/teachers', '/admin', '/unlock',
+      ].contains(location) &&
       !location.startsWith('/teacher')) {
     try {
       final learners = await ref.read(dbProvider).studentDao.getAllStudents();

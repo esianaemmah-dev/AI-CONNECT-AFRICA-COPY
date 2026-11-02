@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:pdfrx/pdfrx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,7 +13,10 @@ import '../../l10n/app_locale.dart';
 import '../../shared/widgets/studio_page.dart';
 import 'pdf_highlights.dart';
 
+final readingActivityProvider = StateProvider<int>((ref) => 0);
+
 enum PdfReadTheme { normal, night, eyeCare }
+
 enum PdfPageFlow { vertical, horizontal }
 
 const _themePref = 'pdf_reader_theme';
@@ -65,6 +69,7 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
   List<PdfOutlineNode> _outline = const [];
 
   String _highlightKey = '';
+  String _readingKey = '';
   List<PdfHighlight> _highlights = [];
   Map<int, List<PdfHighlight>> _highlightsByPage = const {};
   List<PdfPageTextRange> _selection = const [];
@@ -114,13 +119,20 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
     final prefs = _prefs;
     final highlightKey = pdfHighlightKey(studentId, widget.memoryKey);
     final highlights = loadPdfHighlights(prefs, highlightKey);
-    final savedPage = prefs?.getInt(_pagePref(widget.memoryKey)) ?? 1;
-    final savedTheme = PdfReadTheme.values.asNameMap()[
-      prefs?.getString(_themePref)
-    ];
-    final savedFlow = PdfPageFlow.values.asNameMap()[
-      prefs?.getString(_flowPref)
-    ];
+    _readingKey = '${studentId ?? 'guest'}:${widget.memoryKey}';
+    var savedPage = prefs?.getInt(_pagePref(_readingKey));
+    if (savedPage == null && studentId != null) {
+      savedPage = prefs?.getInt(_pagePref(widget.memoryKey));
+      if (savedPage != null) {
+        await prefs?.setInt(_pagePref(_readingKey), savedPage);
+        await prefs?.remove(_pagePref(widget.memoryKey));
+      }
+    }
+    savedPage ??= 1;
+    final savedTheme = PdfReadTheme.values
+        .asNameMap()[prefs?.getString(_themePref)];
+    final savedFlow = PdfPageFlow.values
+        .asNameMap()[prefs?.getString(_flowPref)];
 
     if (!mounted) return;
 
@@ -129,13 +141,17 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
       _flow = savedFlow ?? PdfPageFlow.vertical;
       _startPage = widget.initialPage > 0
           ? widget.initialPage
-          : math.max(savedPage, 1);
+          : math.max(savedPage ?? 1, 1);
       _page = _startPage;
       _pageController.text = '$_page';
       _highlightKey = highlightKey;
       _setHighlights(highlights);
       _loaded = true;
     });
+    if (studentId != null) {
+      await prefs?.setBool('pdf_seen_$studentId:${widget.memoryKey}', true);
+      if (mounted) ref.read(readingActivityProvider.notifier).state++;
+    }
   }
 
   @override
@@ -187,7 +203,11 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
 
     setState(() => _page = page);
     if (!_pageFocus.hasFocus) _pageController.text = '$page';
-    _prefs?.setInt(_pagePref(widget.memoryKey), page);
+    _prefs?.setInt(_pagePref(_readingKey), page);
+    _prefs?.setString(
+      'pdf_last_${_readingKey.split(':').first}',
+      widget.memoryKey,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -256,8 +276,9 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
 
   bool get _selectionHighlighted => _selection.any((range) {
     final rects = pdfLineRects(range);
-    return (_highlightsByPage[range.pageNumber] ?? const [])
-        .any((h) => h.overlaps(range.pageNumber, rects));
+    return (_highlightsByPage[range.pageNumber] ?? const []).any(
+      (h) => h.overlaps(range.pageNumber, rects),
+    );
   });
 
   Future<void> _highlightSelection(PdfTextSelectionDelegate delegate) async {
@@ -441,7 +462,8 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
     List<PdfPage> pages,
     PdfViewerParams params,
   ) {
-    final height = pages.fold<double>(
+    final height =
+        pages.fold<double>(
           0,
           (maxHeight, page) => math.max(maxHeight, page.height),
         ) +
@@ -452,20 +474,12 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
 
     for (final page in pages) {
       rects.add(
-        Rect.fromLTWH(
-          x,
-          (height - page.height) / 2,
-          page.width,
-          page.height,
-        ),
+        Rect.fromLTWH(x, (height - page.height) / 2, page.width, page.height),
       );
       x += page.width + params.margin;
     }
 
-    return PdfPageLayout(
-      pageLayouts: rects,
-      documentSize: Size(x, height),
-    );
+    return PdfPageLayout(pageLayouts: rects, documentSize: Size(x, height));
   }
 
   Color get _canvas => switch (_theme) {
@@ -477,16 +491,48 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
   ColorFilter? get _pageFilter => switch (_theme) {
     PdfReadTheme.normal => null,
     PdfReadTheme.night => const ColorFilter.matrix([
-      -0.87, 0, 0, 0, 230,
-      0, -0.87, 0, 0, 230,
-      0, 0, -0.87, 0, 230,
-      0, 0, 0, 1, 0,
+      -0.87,
+      0,
+      0,
+      0,
+      230,
+      0,
+      -0.87,
+      0,
+      0,
+      230,
+      0,
+      0,
+      -0.87,
+      0,
+      230,
+      0,
+      0,
+      0,
+      1,
+      0,
     ]),
     PdfReadTheme.eyeCare => const ColorFilter.matrix([
-      0.96, 0, 0, 0, 0,
-      0, 0.90, 0, 0, 0,
-      0, 0, 0.72, 0, 0,
-      0, 0, 0, 1, 0,
+      0.96,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0.90,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0.72,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
     ]),
   };
 
@@ -567,9 +613,7 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -611,8 +655,7 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
               pageFocus: _pageFocus,
               theme: _theme,
               flow: _flow,
-              onContents: () =>
-                  _scaffoldKey.currentState?.openDrawer(),
+              onContents: () => _scaffoldKey.currentState?.openDrawer(),
               onZoomOut: () => _viewer.zoomDown(),
               onZoomIn: () => _viewer.zoomUp(),
               onFitWidth: _fitWidth,
@@ -646,9 +689,7 @@ class _PdfReaderState extends ConsumerState<PdfReader> {
                         child: IconButton(
                           tooltip: tr(context, 'Show controls'),
                           onPressed: _toggleChrome,
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                          ),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
                         ),
                       ),
                     ),
@@ -747,11 +788,11 @@ class _PdfToolbar extends StatelessWidget {
     }
 
     Widget divider() => Container(
-          width: 1,
-          height: 24,
-          margin: const EdgeInsets.symmetric(horizontal: 5),
-          color: colors.border,
-        );
+      width: 1,
+      height: 24,
+      margin: const EdgeInsets.symmetric(horizontal: 5),
+      color: colors.border,
+    );
 
     final children = <Widget>[
       button('Contents', Icons.menu_rounded, ready ? onContents : null),
@@ -759,7 +800,11 @@ class _PdfToolbar extends StatelessWidget {
       button('Zoom out', Icons.remove_rounded, ready ? onZoomOut : null),
       button('Zoom in', Icons.add_rounded, ready ? onZoomIn : null),
       button('Fit width', Icons.fit_screen_outlined, ready ? onFitWidth : null),
-      button('Whole page', Icons.crop_portrait_rounded, ready ? onFitPage : null),
+      button(
+        'Whole page',
+        Icons.crop_portrait_rounded,
+        ready ? onFitPage : null,
+      ),
       divider(),
       SizedBox(
         width: 58,
@@ -852,10 +897,10 @@ class _PdfSearchBar extends StatelessWidget {
     final status = searcher.isSearching
         ? '…'
         : controller.text.isEmpty
-            ? ''
-            : searcher.matches.isEmpty
-                ? '0'
-                : '${(searcher.currentIndex ?? 0) + 1} / ${searcher.matches.length}';
+        ? ''
+        : searcher.matches.isEmpty
+        ? '0'
+        : '${(searcher.currentIndex ?? 0) + 1} / ${searcher.matches.length}';
 
     return Material(
       color: colors.surface,
@@ -968,17 +1013,37 @@ class _ViewMenu extends StatelessWidget {
       icon: const Icon(Icons.chrome_reader_mode_outlined, size: 21),
       onSelected: (action) => action(),
       itemBuilder: (_) => [
-        item(Icons.swap_vert_rounded, tr(context, 'Vertical'),
-            flow == PdfPageFlow.vertical, () => onFlow(PdfPageFlow.vertical)),
-        item(Icons.swap_horiz_rounded, tr(context, 'Horizontal'),
-            flow == PdfPageFlow.horizontal, () => onFlow(PdfPageFlow.horizontal)),
+        item(
+          Icons.swap_vert_rounded,
+          tr(context, 'Vertical'),
+          flow == PdfPageFlow.vertical,
+          () => onFlow(PdfPageFlow.vertical),
+        ),
+        item(
+          Icons.swap_horiz_rounded,
+          tr(context, 'Horizontal'),
+          flow == PdfPageFlow.horizontal,
+          () => onFlow(PdfPageFlow.horizontal),
+        ),
         const PopupMenuDivider(),
-        item(Icons.light_mode_outlined, tr(context, 'Day'),
-            theme == PdfReadTheme.normal, () => onTheme(PdfReadTheme.normal)),
-        item(Icons.dark_mode_outlined, tr(context, 'Night'),
-            theme == PdfReadTheme.night, () => onTheme(PdfReadTheme.night)),
-        item(Icons.remove_red_eye_outlined, tr(context, 'Eye care'),
-            theme == PdfReadTheme.eyeCare, () => onTheme(PdfReadTheme.eyeCare)),
+        item(
+          Icons.light_mode_outlined,
+          tr(context, 'Day'),
+          theme == PdfReadTheme.normal,
+          () => onTheme(PdfReadTheme.normal),
+        ),
+        item(
+          Icons.dark_mode_outlined,
+          tr(context, 'Night'),
+          theme == PdfReadTheme.night,
+          () => onTheme(PdfReadTheme.night),
+        ),
+        item(
+          Icons.remove_red_eye_outlined,
+          tr(context, 'Eye care'),
+          theme == PdfReadTheme.eyeCare,
+          () => onTheme(PdfReadTheme.eyeCare),
+        ),
       ],
     );
   }
@@ -1027,9 +1092,8 @@ class _PdfSidebar extends StatelessWidget {
                     Expanded(
                       child: Text(
                         tr(context, 'Document'),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     Text(
@@ -1190,9 +1254,7 @@ class _OutlineList extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        for (final node in outline) ..._tiles(context, node, 0),
-      ],
+      children: [for (final node in outline) ..._tiles(context, node, 0)],
     );
   }
 
@@ -1310,7 +1372,11 @@ class _PdfStatusBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.menu_book_rounded, size: 14, color: colors.textSecondary),
+            Icon(
+              Icons.menu_book_rounded,
+              size: 14,
+              color: colors.textSecondary,
+            ),
             const SizedBox(width: 6),
             Text(
               '$page / $pageCount',
@@ -1321,14 +1387,11 @@ class _PdfStatusBar extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Text(
-              switch (theme) {
-                PdfReadTheme.normal => 'Day',
-                PdfReadTheme.night => 'Night',
-                PdfReadTheme.eyeCare => 'Eye care',
-              },
-              style: TextStyle(color: colors.textSecondary, fontSize: 11),
-            ),
+            Text(switch (theme) {
+              PdfReadTheme.normal => 'Day',
+              PdfReadTheme.night => 'Night',
+              PdfReadTheme.eyeCare => 'Eye care',
+            }, style: TextStyle(color: colors.textSecondary, fontSize: 11)),
           ],
         ),
       ),

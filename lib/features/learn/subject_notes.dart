@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart' show Variable;
 
 import '../../db/daos/topic_resource_dao.dart' show kRecordTopicPrefix;
 import '../../db/otic_database.dart';
@@ -35,17 +36,28 @@ class SubjectNote {
 
 /// The active learner's class (`group_uuid`): on a shared device it decides
 /// whose received notes they may see.
-final learnerClassUuidProvider = FutureProvider.autoDispose<String?>((
+final learnerClassUuidProvider = StreamProvider.autoDispose<String?>((
   ref,
-) async {
+) async* {
   final me = await ref.watch(activeStudentProvider.future);
-  final id = me?.classGroupId;
-  if (id == null) return null;
+  if (me == null) {
+    yield null;
+    return;
+  }
   final db = ref.watch(dbProvider);
-  final group = await (db.select(
-    db.classGroups,
-  )..where((t) => t.id.equals(id))).getSingleOrNull();
-  return group?.groupUuid;
+  yield* db
+      .customSelect(
+        'SELECT c.group_uuid FROM students s '
+        'LEFT JOIN class_groups c ON c.id = s.class_group_id WHERE s.id = ?',
+        variables: [Variable.withInt(me.id)],
+        readsFrom: {db.students, db.classGroups},
+      )
+      .watch()
+      .map(
+        (rows) => rows.isEmpty
+            ? null
+            : rows.single.readNullable<String>('group_uuid'),
+      );
 });
 
 /// [subjectId]'s notes this learner may read: this device's own, plus

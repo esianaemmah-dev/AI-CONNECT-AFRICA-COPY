@@ -8,6 +8,8 @@ import 'package:drift/drift.dart';
 /// the records from their device to another, one way. Single row (id 1).
 @DataClassName('AdminIdentityRow')
 class AdminIdentity extends Table {
+  TextColumn get recoverySalt => text().nullable()();
+  TextColumn get recoveryHash => text().nullable()();
   @override
   String get tableName => 'admin_identity';
 

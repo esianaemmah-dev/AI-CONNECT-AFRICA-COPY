@@ -1,3 +1,7 @@
+import '../../features/admin/admin_service.dart';
+import '../../features/teacher/teacher_profiles.dart';
+import '../../core/policy/policy.dart';
+import '../../collaboration/sync/class_enrolment.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -180,20 +184,41 @@ class StudentNotifier extends AsyncNotifier<Student?> {
     int? classGroupId,
   }) async {
     final db = ref.read(dbProvider);
+    ClassGroup? group;
+    final admin = ref.read(adminSessionProvider);
+    final teacherId = ref.read(activeTeacherIdProvider);
+    if (classGroupId != null) {
+      group = await (db.select(db.classGroups)..where((t) => t.id.equals(classGroupId))).getSingleOrNull();
+      if (group?.groupUuid == null || !await ref.read(policyProvider).can(
+        admin != null ? AdminActor(admin) : TeacherActor(teacherId), RegisterLearner(group!.groupUuid!))) {
+        throw StateError('A class teacher must approve this enrolment.');
+      }
+    }
+
+    return db.transaction(() async {
     final id = await db.studentDao.createStudent(
       StudentsCompanion.insert(
         name: name.trim(),
         age: Value(age),
         grade: Value(grade),
         language: Value(language),
-        classGroupId: Value(classGroupId),
+        classGroupId: const Value(null),
         createdAt: Value(DateTime.now()),
         // Oldest possible "last active": adding a learner must not make them
         // the fallback active profile on an install with no saved choice.
         lastActiveAt: Value(DateTime.fromMillisecondsSinceEpoch(0)),
       ),
     );
+    if (group != null) {
+      if (admin != null) {
+        await ref.read(adminServiceProvider).enrol(admin, studentId: id, group: group, academicYear: DateTime.now().year);
+      } else {
+        final enrolments = ClassEnrolment(db);
+        await enrolments.approve(learnerUuid: await enrolments.learnerUuid(id), name: name, group: group, teacherId: teacherId);
+      }
+    }
     return id;
+    });
   }
 
   Future<void> _rememberActive(int id) async {

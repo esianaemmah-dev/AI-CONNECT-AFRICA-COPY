@@ -30,6 +30,30 @@ class AdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(adminSessionProvider);
     final setUp = ref.watch(adminSetUpProvider).valueOrNull;
+    final service = ref.read(adminServiceProvider);
+    if (session != null && service.pendingRecoveryCode != null) {
+      final code = service.pendingRecoveryCode!;
+      service.pendingRecoveryCode = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Save your recovery code'),
+            content: SelectableText(
+              'Keep this code privately. It is shown once.\n\n$code',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Saved'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: const StudioAppBar(
@@ -116,23 +140,14 @@ class _SetUpState extends ConsumerState<_SetUp> {
     if (_nameError != null || _pinError != null || _againError != null) {
       return;
     }
-    // With a Teachers PIN set, only someone who knows it sets up the Admin.
-    final teachersPin = ref.read(teacherPinProvider);
-    if (await teachersPin.isSet()) {
-      if (!mounted) return;
-      final entered = await askTeacherPin(context, title: 'Teachers PIN');
-      if (entered == null) return;
-      if (!await teachersPin.verify(entered)) {
-        return setState(() => _error = 'That Teachers PIN is not right.');
-      }
-    }
     final session = await ref
         .read(adminServiceProvider)
         .setUp(name: _name.text, pin: pin);
     if (!mounted) return;
     if (session == null) {
       return setState(
-        () => _error = 'This device already has an Admin, or holds another '
+        () => _error =
+            'This device already has an Admin, or holds another '
             'Admin’s school records.',
       );
     }
@@ -239,15 +254,15 @@ class _SignInState extends ConsumerState<_SignIn> {
           obscureText: true,
           keyboardType: TextInputType.number,
           inputFormatters: kPinInputFormatters,
-          decoration: InputDecoration(labelText: 'Admin PIN', errorText: _error),
+          decoration: InputDecoration(
+            labelText: 'Admin PIN',
+            errorText: _error,
+          ),
           onSubmitted: (_) => _submit(),
         ),
         const SizedBox(height: 16),
         FilledButton(onPressed: _submit, child: const Text('Sign in')),
-        TextButton(
-          onPressed: _recover,
-          child: const Text('Forgot PIN?'),
-        ),
+        TextButton(onPressed: _recover, child: const Text('Forgot PIN?')),
       ],
     );
   }
@@ -257,14 +272,12 @@ class _SignInState extends ConsumerState<_SignIn> {
   /// keep people apart on a shared device, not real security.
   Future<void> _recover() async {
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await _confirm(
+    final code = await _ask(context, 'Admin recovery code', '');
+    if (code == null || !mounted) return;
+    final next = await askTeacherPin(
       context,
-      'Set a new Admin PIN? Everything the Admin set up — teachers, '
-      'classes, subjects — stays. Anyone at this device can do this, so '
-      'the Admin PIN is a lock for a shared device, not real security.',
+      title: 'New Admin PIN (4–8 digits)',
     );
-    if (!ok || !mounted) return;
-    final next = await askTeacherPin(context, title: 'New Admin PIN (4–8 digits)');
     if (next == null || !mounted) return;
     final again = await askTeacherPin(context, title: 'New Admin PIN again');
     if (again == null || !mounted) return;
@@ -274,11 +287,17 @@ class _SignInState extends ConsumerState<_SignIn> {
       );
       return;
     }
-    final session = await ref.read(adminServiceProvider).recoverPin(next);
+    final session = await ref
+        .read(adminServiceProvider)
+        .recoverPin(next, recoveryCode: code);
     if (!mounted) return;
     if (!session) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('No Admin set up on this device yet.')),
+        const SnackBar(
+          content: Text(
+            'Recovery code is incorrect, unavailable, or temporarily locked.',
+          ),
+        ),
       );
       return;
     }
@@ -320,16 +339,17 @@ final _registeredByProvider = StreamProvider<Map<int, int>>((ref) {
 /// This device's own subjects (never ones received from a class).
 final _subjectsProvider = StreamProvider<List<CustomSubject>>((ref) {
   final db = ref.watch(dbProvider);
-  return (db.select(db.customSubjects)
-        ..where((t) => t.classGroupUuid.isNull()))
-      .watch();
+  return (db.select(
+    db.customSubjects,
+  )..where((t) => t.classGroupUuid.isNull())).watch();
 });
 
 /// Classes made on this device (never ones joined as a student).
 final _classesProvider = StreamProvider<List<ClassGroup>>((ref) {
   final db = ref.watch(dbProvider);
-  return (db.select(db.classGroups)..where((t) => t.joined.equals(false)))
-      .watch();
+  return (db.select(
+    db.classGroups,
+  )..where((t) => t.joined.equals(false))).watch();
 });
 
 class _Records extends ConsumerWidget {
@@ -383,7 +403,20 @@ class _Records extends ConsumerWidget {
 
     Future<void> run(Future<void> Function() f, [String? done]) async {
       final messenger = ScaffoldMessenger.of(context);
-      await f();
+      if (!session.lease.fresh) {
+        final pin = await askTeacherPin(context, title: 'Confirm Admin PIN');
+        if (pin == null || await admin.signIn(pin) == null) return;
+        session.lease.authenticatedAt = DateTime.now();
+        session.lease.lastActivity = DateTime.now();
+      }
+      try {
+        await f();
+      } on StateError {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Sign in again to continue.')),
+        );
+        return;
+      }
       if (done != null) {
         messenger.showSnackBar(SnackBar(content: Text(done)));
       }
@@ -408,30 +441,49 @@ class _Records extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.password_rounded),
               title: const Text('My PIN'),
-              subtitle: const Text('Show it or change it'),
-              onTap: () async {
-                final pin = await admin.pin();
-                if (!context.mounted) return;
-                _showPin(
-                  context,
-                  'Admin PIN',
-                  pin,
-                  onChange: () => _changeMyPin(context, ref),
-                );
-              },
+              subtitle: const Text('Change your PIN'),
+              onTap: () => _changeMyPin(context, ref),
             ),
             ListTile(
-              leading: const Icon(Icons.groups_2_rounded),
-              title: const Text('Teachers PIN'),
-              subtitle: const Text('The shared PIN that opens the Teachers area'),
-              onTap: () => _manageTeachersPin(context, ref),
+              leading: const Icon(Icons.key_outlined),
+              title: const Text('Create recovery code'),
+              subtitle: const Text(
+                'Save it privately. Creating a code replaces the previous one.',
+              ),
+              onTap: () async {
+                final pin = await askTeacherPin(
+                  context,
+                  title: 'Confirm Admin PIN',
+                );
+                if (pin == null) return;
+                final verified = await admin.signIn(pin);
+                if (verified == null || !context.mounted) return;
+                session.lease.authenticatedAt = DateTime.now();
+                final code = await admin.createRecoveryCode(session);
+                if (!context.mounted) return;
+                await showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Save your recovery code'),
+                    content: SelectableText(code),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Saved'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.sync_rounded),
               title: const Text('Send school records'),
               subtitle: const Text('To another device, one way'),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const SendRecordsPage()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const SendRecordsPage(),
+                ),
               ),
             ),
           ],
@@ -442,10 +494,7 @@ class _Records extends ConsumerWidget {
         const _SchoolCard(),
 
         // ── Teachers ───────────────────────────────────────────────────
-        _Title(
-          'Teachers',
-          onAdd: () => _addTeacher(context, ref),
-        ),
+        _Title('Teachers', onAdd: () => _addTeacher(context, ref)),
         _Card(
           children: [
             if (teachers.isEmpty) const ListTile(title: Text('No teachers')),
@@ -454,7 +503,7 @@ class _Records extends ConsumerWidget {
                 leading: const Icon(Icons.person_rounded),
                 title: Text(t.name),
                 subtitle: Text(
-                  'PIN ${t.pinPlain ?? 'not stored — reset to set'} · '
+                  ''
                   '${assignments.where((a) => a.teacherId == t.id).length} '
                   'assignments',
                 ),
@@ -492,9 +541,7 @@ class _Records extends ConsumerWidget {
             if (classesOfTeacher.isEmpty)
               ListTile(
                 title: Text(
-                  classes.isEmpty
-                      ? 'Add a class first'
-                      : 'No class teachers',
+                  classes.isEmpty ? 'Add a class first' : 'No class teachers',
                 ),
               ),
             for (final e in classesOfTeacher.entries)
@@ -515,7 +562,8 @@ class _Records extends ConsumerWidget {
                     );
                     if (picked == null) return;
                     await run(
-                      () => admin.setClassTeacherClasses(session, e.key, picked),
+                      () =>
+                          admin.setClassTeacherClasses(session, e.key, picked),
                     );
                   },
                   'Remove role': () async {
@@ -539,10 +587,7 @@ class _Records extends ConsumerWidget {
         ),
 
         // ── Classes and streams ────────────────────────────────────────
-        _Title(
-          'Classes & streams',
-          onAdd: () => _editClass(context, ref),
-        ),
+        _Title('Classes & streams', onAdd: () => _editClass(context, ref)),
         _Card(
           children: [
             if (classes.isEmpty) const ListTile(title: Text('No classes')),
@@ -584,7 +629,9 @@ class _Records extends ConsumerWidget {
                   'Rename': () async {
                     final name = await _ask(context, 'Subject', s.name);
                     if (name == null) return;
-                    await run(() => admin.renameSubject(session, s.subjectId, name));
+                    await run(
+                      () => admin.renameSubject(session, s.subjectId, name),
+                    );
                     ref.invalidate(customSubjectsProvider);
                     ref.invalidate(mergedSubjectsProvider);
                   },
@@ -593,7 +640,9 @@ class _Records extends ConsumerWidget {
                       context,
                       'Delete ${s.name} and all its materials?',
                     )) {
-                      await run(() => admin.deleteSubject(session, s.subjectId));
+                      await run(
+                        () => admin.deleteSubject(session, s.subjectId),
+                      );
                       ref.invalidate(customSubjectsProvider);
                       ref.invalidate(mergedSubjectsProvider);
                     }
@@ -740,63 +789,6 @@ class _Records extends ConsumerWidget {
     );
   }
 
-  /// The shared Teachers PIN: show it, change it, or clear it (cleared,
-  /// nothing gates the Teachers area).
-  Future<void> _manageTeachersPin(BuildContext context, WidgetRef ref) async {
-    final pin = ref.read(teacherPinProvider);
-    final current = await pin.plain();
-    final isSet = await pin.isSet();
-    if (!context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Teachers PIN'),
-        content: Text(
-          !isSet
-              ? 'No Teachers PIN is set, so the Teachers area is open to '
-                    'anyone on this device.'
-              : current == null
-              ? 'A Teachers PIN is set. It was set before PINs were stored, '
-                    'so it can’t be shown — set a new one to see it.'
-              : 'The current Teachers PIN is $current.',
-        ),
-        actions: [
-          if (isSet)
-            TextButton(
-              onPressed: () async {
-                await pin.clear();
-                if (ctx.mounted) Navigator.pop(ctx);
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Teachers PIN cleared.')),
-                );
-              },
-              child: const Text('Clear'),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final next = await askTeacherPin(
-                context,
-                title: 'New Teachers PIN (4–8 digits)',
-              );
-              if (next == null) return;
-              await pin.set(next);
-              messenger.showSnackBar(
-                const SnackBar(content: Text('Teachers PIN set.')),
-              );
-            },
-            child: Text(isSet ? 'Change' : 'Set'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _changeMyPin(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     final current = await askTeacherPin(context, title: 'Current PIN');
@@ -817,7 +809,10 @@ class _Records extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     final name = await _ask(context, 'Teacher’s name', '');
     if (name == null || !context.mounted) return;
-    final pin = await askTeacherPin(context, title: 'PIN for $name (4–8 digits)');
+    final pin = await askTeacherPin(
+      context,
+      title: 'PIN for $name (4–8 digits)',
+    );
     if (pin == null) return;
     final error = await ref
         .read(adminServiceProvider)
@@ -857,7 +852,10 @@ class _Records extends ConsumerWidget {
     }
     final name = await _ask(context, 'Class teacher’s name', '');
     if (name == null || !context.mounted) return;
-    final pin = await askTeacherPin(context, title: 'PIN for $name (4–8 digits)');
+    final pin = await askTeacherPin(
+      context,
+      title: 'PIN for $name (4–8 digits)',
+    );
     if (pin == null || !context.mounted) return;
     final again = await askTeacherPin(context, title: 'PIN again');
     if (again == null) return;
@@ -904,7 +902,12 @@ class _Records extends ConsumerWidget {
     if (existing == null) {
       await admin.addClass(session, className: c, streamName: s);
     } else {
-      await admin.renameClass(session, existing.id, className: c, streamName: s);
+      await admin.renameClass(
+        session,
+        existing.id,
+        className: c,
+        streamName: s,
+      );
     }
   }
 
@@ -969,13 +972,27 @@ class _Records extends ConsumerWidget {
     ref.invalidate(allLearnersProvider);
   }
 
+  Future<bool> _reauthenticate(BuildContext context, WidgetRef ref) async {
+    if (session.lease.fresh) return true;
+    final pin = await askTeacherPin(context, title: 'Confirm Admin PIN');
+    if (pin == null || await ref.read(adminServiceProvider).signIn(pin) == null)
+      return false;
+    session.lease.authenticatedAt = DateTime.now();
+    session.lease.lastActivity = DateTime.now();
+    return session.isValid;
+  }
+
   Future<void> _deleteLearner(
     BuildContext context,
     WidgetRef ref,
     Student learner,
   ) async {
+    if (!await _reauthenticate(context, ref) || !context.mounted) return;
     final router = GoRouter.of(context);
-    if (!await _confirm(context, 'Delete ${learner.name}? This cannot be undone.')) {
+    if (!await _confirm(
+      context,
+      'Delete ${learner.name}? This cannot be undone.',
+    )) {
       return;
     }
     final wasActive =
@@ -997,6 +1014,7 @@ class _Records extends ConsumerWidget {
   }
 
   Future<void> _resetAll(BuildContext context, WidgetRef ref) async {
+    if (!await _reauthenticate(context, ref) || !context.mounted) return;
     final router = GoRouter.of(context);
     if (!await _confirm(
       context,
@@ -1039,7 +1057,9 @@ class _SchoolCard extends ConsumerWidget {
             onPressed: () async {
               final next = await _ask(context, 'School name', name ?? '');
               if (next == null) return;
-              await ref.read(dbProvider).classSyncDao.setSchoolName(next);
+              final session = ref.read(adminSessionProvider);
+              if (session == null) return;
+              await ref.read(adminServiceProvider).setSchoolName(session, next);
             },
             child: Text(hasSchool ? 'Rename' : 'Set school'),
           ),
@@ -1065,10 +1085,7 @@ class _Title extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            child: Text(text, style: Theme.of(context).textTheme.titleMedium),
           ),
           if (onAdd != null)
             TextButton.icon(
@@ -1087,8 +1104,10 @@ class _Card extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) =>
-      Card(margin: EdgeInsets.zero, child: Column(children: children));
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    child: Column(children: children),
+  );
 }
 
 /// A row's actions, by label.
@@ -1127,39 +1146,6 @@ class _Menu extends StatelessWidget {
 
 /// Shows a stored PIN (or says it isn't stored). [onChange], when given,
 /// adds a button to change it.
-Future<void> _showPin(
-  BuildContext context,
-  String title,
-  String? pin, {
-  VoidCallback? onChange,
-}) => showDialog<void>(
-  context: context,
-  builder: (ctx) => AlertDialog(
-    title: Text(title),
-    content: Text(
-      pin == null
-          ? 'This PIN was set before PINs were stored, so it can’t be shown. '
-                'Reset it to set a new one.'
-          : 'The PIN is $pin.',
-      style: pin == null ? null : const TextStyle(fontSize: 22),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(ctx),
-        child: const Text('Close'),
-      ),
-      if (onChange != null)
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(ctx);
-            onChange();
-          },
-          child: const Text('Change'),
-        ),
-    ],
-  ),
-);
-
 Future<bool> _confirm(BuildContext context, String message) async =>
     await showDialog<bool>(
       context: context,
@@ -1361,10 +1347,8 @@ class _ClassDialogState extends State<_ClassDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(
-            context,
-            (_name.text.trim(), _stream.text.trim()),
-          ),
+          onPressed: () =>
+              Navigator.pop(context, (_name.text.trim(), _stream.text.trim())),
           child: const Text('Save'),
         ),
       ],

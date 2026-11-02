@@ -118,18 +118,7 @@ class AppShell extends ConsumerWidget {
       Icons.emoji_events_rounded,
       '/achievements',
     ),
-    _NavDest(
-      'Teachers',
-      Icons.groups_outlined,
-      Icons.groups_rounded,
-      '/teachers',
-    ),
-    _NavDest(
-      'Admin',
-      Icons.admin_panel_settings_outlined,
-      Icons.admin_panel_settings_rounded,
-      '/admin',
-    ),
+    _NavDest('Staff access', Icons.badge_outlined, Icons.badge_rounded, '/teachers'),
   ];
 
   static const kNavBarHeight = 72.0;

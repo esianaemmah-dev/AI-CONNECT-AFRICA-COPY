@@ -1,25 +1,23 @@
+import '../../collaboration/sync/learner_sync_controller.dart';
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../collaboration/lan_discovery.dart';
-import '../../collaboration/sync/class_crypto.dart' show schoolTag;
-import '../../collaboration/sync/mdns_discovery.dart';
 import '../../collaboration/sync/selective_sync_manager.dart';
 import '../../collaboration/sync/sync_address.dart';
 import '../../core/theme/app_colors.dart';
 import '../../db/otic_database.dart';
 import '../../db/providers/db_provider.dart';
 import '../../l10n/app_locale.dart';
-import '../../services/custom_subject_service.dart';
 import '../../shared/widgets/responsive.dart';
 import '../../shared/widgets/studio_page.dart';
 import '../teacher/class_providers.dart';
-import '../../services/offline/offline_readiness.dart';
 import 'classmate_share_cards.dart';
 import 'offline_readiness_card.dart';
 
@@ -43,13 +41,9 @@ class ClassSyncScreen extends ConsumerStatefulWidget {
 }
 
 class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
-  LanDiscoveryService? _service;
-  final MdnsSyncDiscovery _mdns = MdnsSyncDiscovery();
-  List<LanPeer> _peers = const [];
-  List<MdnsSyncPeer> _mdnsPeers = const [];
-  String? _myTag;
-  String? _discoveryNote;
-
+  LearnerSyncController get _sync => ref.read(learnerSyncProvider);
+  LanDiscoveryService? get _service => _sync.discovery;
+  String? get _discoveryNote => _sync.error;
   final _code = TextEditingController();
   final _address = TextEditingController();
   bool _joining = false;
@@ -67,96 +61,17 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
   void dispose() {
     _code.dispose();
     _address.dispose();
-    _service?.dispose();
-    unawaited(_mdns.dispose());
+
     super.dispose();
   }
 
   Future<void> _start() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _address.text = prefs.getString(_manualAddressKey) ?? '';
-    } catch (_) {}
-    if (kIsWeb) {
-      setState(
-        () => _discoveryNote =
-            'Finding the teacher automatically isn’t available in the web '
-            'preview. Type the teacher’s address below.',
-      );
-      return;
-    }
-
-    final student = await ref.read(activeStudentProvider.future);
-    final me = await ref.read(dbProvider).classSyncDao.identity();
-    if (!mounted) return;
-    _myTag = schoolTag(me.schoolId);
-    final service = LanDiscoveryService(
-      displayName: student?.name ?? 'Learner',
-      points: student?.totalPoints ?? 0,
-      schoolTag: _myTag,
-    );
-
-    // Best-effort, additive — mDNS is unsupported on Linux/web (see
-    // MdnsSyncDiscovery) and never blocks UDP discovery either way.
-    unawaited(_mdns.startDiscovering());
-    _mdns.peers.listen((list) {
-      if (mounted) setState(() => _mdnsPeers = list);
-    });
-
-    try {
-      await service.start();
-      service.peers.listen((list) {
-        if (mounted) setState(() => _peers = list);
-      });
-      if (mounted) {
-        setState(() => _service = service);
-      } else {
-        service.dispose();
-      }
-    } on SocketException catch (e) {
-      service.dispose();
-      if (mounted) {
-        setState(
-          () => _discoveryNote =
-              'Couldn’t look for the teacher on this network '
-              '(${e.osError?.message ?? e.message}). Check the Wi-Fi is on, or '
-              'type the teacher’s address below.',
-        );
-      }
-    }
+    await _sync.start();
+    if (mounted) setState(() => _address.text = _sync.address);
   }
 
-  /// Teachers seen on the network, then the typed address. Deduplicated by
-  /// (address, port) — one teacher answers on both UDP and mDNS.
-  List<TeacherEndpoint> get _endpoints {
-    final found = <TeacherEndpoint>[];
-    final seen = <String>{};
-    void add(TeacherEndpoint e) {
-      if (seen.add('${e.address}:${e.port}')) found.add(e);
-    }
-
-    for (final p in _peers) {
-      // With a school, only that school's teachers; without one (never
-      // joined a class) every teacher, so the learner can join.
-      final visible = _myTag == null
-          ? p.isSyncServer
-          : p.isSyncServer && p.schoolTag == _myTag;
-      if (visible) add((address: p.address, port: p.syncPort!));
-    }
-    for (final m in _mdnsPeers) {
-      add((address: m.address, port: m.port));
-    }
-    final typed = parseTeacherAddress(_address.text);
-    if (typed != null) add(typed);
-    return found;
-  }
-
-  /// Classmates of this school sharing their teacher's notes nearby.
-  List<TeacherEndpoint> get _classmates => [
-    for (final p in _peers)
-      if (p.isClassmateShare && (_myTag == null || p.schoolTag == _myTag))
-        (address: p.address, port: p.syncPort!),
-  ];
+  List<TeacherEndpoint> get _endpoints => _sync.endpoints;
+  List<TeacherEndpoint> get _classmates => _sync.classmates;
 
   bool get _addressInvalid =>
       _address.text.trim().isNotEmpty &&
@@ -178,13 +93,42 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
       return;
     }
     setState(() => _joining = true);
+    await _sync.setAddress(_address.text);
+    _sync.waiting(true);
     final manager = SelectiveSyncManager(ref.read(dbProvider));
     try {
       final me = await ref.read(activeStudentProvider.future);
+      if (me == null) {
+        _message('Choose a learner before joining a class.');
+        return;
+      }
       final result = await manager.joinClass(
         teachers: _endpoints,
         typedCode: _code.text,
-        name: me?.name ?? '',
+        studentId: me.id,
+        confirmClass: (name, school, teacher) async {
+          if (!mounted ||
+              ref.read(activeStudentProvider).valueOrNull?.id != me.id)
+            return false;
+          return await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm your class'),
+                  content: Text('$name\n$school\n$teacher'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Join and download'),
+                    ),
+                  ],
+                ),
+              ) ??
+              false;
+        },
       );
       if (!mounted) return;
       if (!result.ok) {
@@ -192,27 +136,25 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
         return;
       }
       unawaited(_rememberAddress());
-      final student = await ref.read(activeStudentProvider.future);
-      if (student != null) {
-        await ref
-            .read(dbProvider)
-            .classGroupDao
-            .assignLearner(student.id, result.group!.id);
-        ref.invalidate(activeStudentProvider);
-      }
+      ref.invalidate(activeStudentProvider);
       if (!mounted) return;
       _code.clear();
       setState(() {
         _result = null;
         _syncError = null;
+        _joining = false;
       });
       _message(
         'Joined ${classLabel(result.group!)}'
         '${(result.schoolName ?? '').isEmpty ? '' : ' at ${result.schoolName}'}. '
-        'Tap Sync now to get your class notes.',
+        'Downloading your class materials.',
       );
+      await _syncNow(result.group!);
+    } catch (_) {
+      if (mounted) _message('Could not finish joining your class. Try again.');
     } finally {
       manager.dispose();
+      _sync.waiting(false);
       if (mounted) setState(() => _joining = false);
     }
   }
@@ -223,47 +165,20 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
   /// teacher's, pinned at join, and the co-teachers in its signed roster),
   /// so a wrong or fake device can only fail, never feed this one notes.
   Future<void> _syncNow(ClassGroup group) async {
-    if (_syncing) return;
     if (_addressInvalid) {
-      _message('That teacher address doesn’t look right. Try 192.168.43.1');
+      _message('Check the teacher address in Connection help.');
       return;
     }
-    final endpoints = _endpoints;
-    if (endpoints.isEmpty) {
+    setState(() => _syncing = true);
+    await _rememberAddress();
+    await _sync.setAddress(_address.text);
+    final result = await _sync.sync(group: group);
+    if (mounted)
       setState(() {
-        _result = null;
-        _syncError =
-            'No teacher device found';
+        _syncing = false;
+        _result = result;
+        _syncError = _sync.error;
       });
-      return;
-    }
-    setState(() {
-      _syncing = true;
-      _result = null;
-      _syncError = null;
-    });
-    final manager = SelectiveSyncManager(ref.read(dbProvider));
-    try {
-      final last = await manager.syncClassEverywhere(
-        candidates: endpoints,
-        group: group,
-      );
-      if (!mounted) return;
-      unawaited(_rememberAddress());
-      // The teacher's subject list may have changed, and PDFs may have come.
-      ref.invalidate(customSubjectsProvider);
-      ref.invalidate(offlineReadinessProvider(group.id));
-      setState(() {
-        if (last.ok) {
-          _result = last;
-        } else {
-          _syncError = last.error;
-        }
-      });
-    } finally {
-      manager.dispose();
-      if (mounted) setState(() => _syncing = false);
-    }
   }
 
   void _message(String text) {
@@ -309,6 +224,7 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(learnerSyncProvider);
     final ac = AppColors.of(context);
     final studentAsync = ref.watch(activeStudentProvider);
     final classes = ref.watch(classGroupsProvider).valueOrNull ?? const [];
@@ -333,6 +249,8 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Text(_sync.status),
+            if (_sync.busy) const LinearProgressIndicator(),
             if (joined) ...[
               StudioCard(
                 accent: AppColors.accentTeal,
@@ -364,20 +282,26 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.sync_rounded, size: 18),
-                      label: const Text('Sync now'),
+                      label: const Text('Get latest materials'),
                     ),
                     if (_result != null) ...[
                       const SizedBox(height: 10),
                       Text(
                         _summary(_result!),
-                        style: TextStyle(fontSize: 12.5, color: ac.textSecondary),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: ac.textSecondary,
+                        ),
                       ),
                     ],
                     if (_syncError != null) ...[
                       const SizedBox(height: 10),
                       Text(
                         _syncError!,
-                        style: const TextStyle(fontSize: 12.5, color: Colors.red),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.red,
+                        ),
                       ),
                     ],
                   ],
@@ -385,10 +309,13 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
               ),
               const SizedBox(height: 16),
               OfflineReadinessCard(classId: group.id),
-              if (studentAsync.valueOrNull case final me?) ...[
-                const SizedBox(height: 16),
-                _MySubjectsCard(studentId: me.id, learnerName: me.name),
-              ],
+              const SizedBox(height: 16),
+              const Text('All materials shared with your class are included.'),
+              TextButton.icon(
+                onPressed: () => context.push('/my-notes'),
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('Open my notes'),
+              ),
 
               const SizedBox(height: 16),
               GetFromClassmateCard(
@@ -440,13 +367,23 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
                           )
                         : const Icon(Icons.vpn_key_outlined, size: 18),
                     label: Text(
-                      _joining
-                          ? 'Waiting for approval…'
-                          : 'Join class',
+                      _joining ? 'Waiting for approval…' : 'Join class',
                     ),
                   ),
                 ],
               ),
+            ),
+            ExpansionTile(
+              title: const Text('Connection help'),
+              children: [
+                TextField(
+                  controller: _address,
+                  decoration: const InputDecoration(
+                    labelText: 'Teacher address',
+                  ),
+                  onChanged: (value) => _sync.setAddress(value),
+                ),
+              ],
             ),
             if (_discoveryNote != null) ...[
               const SizedBox(height: 12),
@@ -464,51 +401,6 @@ class _ClassSyncScreenState extends ConsumerState<ClassSyncScreen> {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// The subjects a learner says they take — every built-in subject plus the
-/// ones their teacher made. It arrives with the learner's progress, and on
-/// a student device it decides whose notes they may read (`note_access.dart`).
-class _MySubjectsCard extends ConsumerWidget {
-  const _MySubjectsCard({required this.studentId, required this.learnerName});
-
-  final int studentId;
-  final String learnerName;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ac = AppColors.of(context);
-    final subjects = ref.watch(mergedSubjectsProvider).valueOrNull ?? const [];
-    final enrolled =
-        ref.watch(enrolledSubjectsProvider(studentId)).valueOrNull ?? const {};
-    final dao = ref.read(dbProvider).classSyncDao;
-
-    return StudioCard(
-      accent: AppColors.accentGreen,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'My subjects',
-            style: TextStyle(fontWeight: FontWeight.w700, color: ac.textPrimary),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final s in subjects)
-                FilterChip(
-                  label: Text(s.name),
-                  selected: enrolled.contains(s.id),
-                  onSelected: (on) => dao.setEnrolled(studentId, s.id, on),
-                ),
-            ],
-          ),
-        ],
       ),
     );
   }

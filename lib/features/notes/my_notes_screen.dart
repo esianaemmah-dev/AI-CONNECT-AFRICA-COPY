@@ -1,3 +1,5 @@
+import '../learn/class_learning_panel.dart';
+import '../../collaboration/sync/learner_sync_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +29,7 @@ class MyNotesSubject {
   final Map<String, int> quizzes;
 }
 
-/// The teacher's PDFs for every subject the active learner registered for
+/// The teacher's PDFs for every subject in the active learner's class
 /// (all subjects on the teacher's own device). Read-only.
 final myNotesProvider = FutureProvider.autoDispose<List<MyNotesSubject>>((
   ref,
@@ -82,6 +84,7 @@ class MyNotesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(learnerSyncProvider);
     final ac = AppColors.of(context);
     final notes = ref.watch(myNotesProvider);
     return Scaffold(
@@ -122,6 +125,7 @@ class MyNotesScreen extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   children: [
+                    const ClassLearningPanel(),
                     // One collapsible section per subject.
                     for (final s in subjects)
                       Padding(

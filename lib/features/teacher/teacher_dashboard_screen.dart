@@ -9,7 +9,6 @@ import '../../db/providers/db_provider.dart';
 import '../../shared/widgets/responsive.dart';
 import '../../shared/widgets/studio_page.dart';
 import 'class_providers.dart';
-import 'teacher_pin_screen.dart';
 
 String _shortWhen(DateTime dt) {
   final local = dt.toLocal();
@@ -79,8 +78,9 @@ class _TeacherDashboardScreenState
     // A class deleted or renamed elsewhere must not leave the filter holding
     // a stale row.
     final _Filter filter = switch (_filter) {
-      _InClass(:final group) when mine.contains(group.id) =>
-        _InClass(classById[group.id]!),
+      _InClass(:final group) when mine.contains(group.id) => _InClass(
+        classById[group.id]!,
+      ),
       _ => _AllLearners(mine),
     };
 
@@ -111,9 +111,9 @@ class _TeacherDashboardScreenState
           ),
           const SizedBox(width: 8),
           StudioHeaderIconButton(
-            tooltip: 'Teacher PIN',
+            tooltip: 'Account & PIN',
             icon: Icons.lock_rounded,
-            onTap: () => showTeacherPinSettings(context, ref),
+            onTap: () => context.push('/teachers'),
           ),
         ],
       ),
@@ -156,9 +156,7 @@ class _TeacherDashboardScreenState
                 ),
                 const SizedBox(height: 14),
                 if (shown.isEmpty)
-                  _EmptyLearners(
-                    message: 'No learners',
-                  )
+                  _EmptyLearners(message: 'No learners')
                 else
                   for (final s in shown)
                     _LearnerCard(
@@ -175,7 +173,6 @@ class _TeacherDashboardScreenState
       ),
     );
   }
-
 }
 
 class _ClassChips extends StatelessWidget {
@@ -700,9 +697,9 @@ class _TeacherPinCard extends ConsumerWidget {
           Icons.lock_outline_rounded,
           color: AppColors.accentBlue,
         ),
-        title: const Text('Teacher PIN'),
+        title: const Text('Staff account'),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => showTeacherPinSettings(context, ref),
+        onTap: () => context.push('/teachers'),
       ),
     );
   }

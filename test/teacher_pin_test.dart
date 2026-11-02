@@ -30,7 +30,7 @@ void main() {
       final pin = TeacherPin();
       expect(await pin.plain(), isNull, reason: 'none set yet');
       await pin.set('2468');
-      expect(await pin.plain(), '2468');
+      expect(await pin.plain(), isNull);
       await pin.clear();
       expect(await pin.plain(), isNull);
       expect(await pin.isSet(), isFalse);
@@ -65,6 +65,8 @@ void main() {
       expect(gate('/teacher', signedIn: false), '/teachers');
       expect(gate('/teacher/materials', signedIn: false), '/teachers');
       expect(gate('/teacher/sync', signedIn: false), '/teachers');
+      expect(gate('/teachers/cloud', signedIn: false), '/teachers');
+      expect(gate('/teachers/cloud', signedIn: true), isNull);
     });
 
     test('signed in, the tools open — on any device', () {

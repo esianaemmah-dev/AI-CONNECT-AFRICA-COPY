@@ -120,9 +120,22 @@ class ClassGroupDao extends DatabaseAccessor<OticDatabase>
 
   /// Moves a learner into [classGroupId], or out of any class when null.
   Future<void> assignLearner(int studentId, int? classGroupId) =>
-      (update(students)..where((t) => t.id.equals(studentId))).write(
-        StudentsCompanion(classGroupId: Value(classGroupId)),
-      );
+      transaction(() async {
+        await (update(students)..where((t) => t.id.equals(studentId))).write(
+          StudentsCompanion(classGroupId: Value(classGroupId)),
+        );
+        if (classGroupId == null) return;
+        final group = await (select(classGroups)
+              ..where((t) => t.id.equals(classGroupId)))
+            .getSingleOrNull();
+        final uuid = group?.groupUuid;
+        if (uuid != null) {
+          await attachedDatabase.classSyncDao.registerMaterialSubjects(
+            uuid,
+            studentId: studentId,
+          );
+        }
+      });
 
   /// Topic count, mean mastery and total sessions for every learner, keyed by
   /// student id. One grouped query rather than one per learner.

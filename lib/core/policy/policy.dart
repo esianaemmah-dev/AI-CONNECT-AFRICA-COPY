@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../db/otic_database.dart';
 import '../../db/providers/db_provider.dart';
 import '../../features/admin/admin_service.dart';
-import '../../features/teacher/teacher_pin.dart';
 import '../../features/teacher/teacher_profiles.dart';
 import '../../features/teacher/teaching_scope.dart';
 
@@ -100,66 +99,77 @@ final class ManageSchool extends Request {
 /// enrolments, note owners) from the database, so a screen never decides
 /// on its own.
 class Policy {
-  Policy(this._db, {required Future<bool> Function() gated})
-    : _gated = gated,
-      _scope = TeachingScope(_db);
+  Policy(this._db, {this.authenticated}) : _scope = TeachingScope(_db);
+  final bool Function(Actor)? authenticated;
 
   final OticDatabase _db;
   final TeachingScope _scope;
 
-  /// Whether this device has a Teachers PIN. Without one nothing is gated.
-  final Future<bool> Function() _gated;
-
-  Future<bool> can(Actor actor, Request request) async => switch (request) {
-    ReadNotes(:final subjectId) => switch (await readableSubjects(actor)) {
-      null => true,
-      final readable => readable.contains(subjectId),
-    },
-    UploadNote(:final subjectId) =>
-      actor is TeacherActor &&
-          await _scope.mayUpload(actor.teacherId, subjectId),
-    ChangeNote(:final subjectId, :final documentTitle) =>
-      actor is TeacherActor &&
-          await _scope.mayChangeNote(actor.teacherId, subjectId, documentTitle),
-    ShareNote(:final subjectId, :final documentTitle, :final classGroupUuid) =>
-      actor is TeacherActor &&
-          await _scope.mayShare(
-            actor.teacherId,
-            subjectId,
-            documentTitle,
-            classGroupUuid,
-          ),
-    ManageClassDevices(:final classGroupUuid) =>
-      actor is AdminActor ||
-          (actor is TeacherActor &&
-              actor.teacherId != null &&
-              (await _scope.assignments(
-                actor.teacherId!,
-              )).any((a) => a.classGroupUuid == classGroupUuid)),
-    SupportLearner(:final subjectId, :final classGroupUuid) =>
-      actor is TeacherActor &&
-          await _scope.teaches(
-            actor.teacherId,
-            subjectId,
-            classGroupUuid: classGroupUuid,
-          ),
-    RegisterLearner(:final classGroupUuid) =>
-      actor is AdminActor ||
-          (actor is TeacherActor &&
-              (await _scope.classTeacherOf(
-                actor.teacherId,
-              )).contains(classGroupUuid)),
-    ManageSchool() => actor is AdminActor,
-  };
+  Future<bool> can(Actor actor, Request request) async {
+    if (authenticated != null && !authenticated!(actor)) return false;
+    return switch (request) {
+      ReadNotes(:final subjectId) => switch (await readableSubjects(actor)) {
+        null => true,
+        final readable => readable.contains(subjectId),
+      },
+      UploadNote(:final subjectId) =>
+        actor is TeacherActor &&
+            await _scope.mayUpload(actor.teacherId, subjectId),
+      ChangeNote(:final subjectId, :final documentTitle) =>
+        actor is TeacherActor &&
+            await _scope.mayChangeNote(
+              actor.teacherId,
+              subjectId,
+              documentTitle,
+            ),
+      ShareNote(
+        :final subjectId,
+        :final documentTitle,
+        :final classGroupUuid,
+      ) =>
+        actor is TeacherActor &&
+            await _scope.mayShare(
+              actor.teacherId,
+              subjectId,
+              documentTitle,
+              classGroupUuid,
+            ),
+      ManageClassDevices(:final classGroupUuid) =>
+        actor is AdminActor ||
+            (actor is TeacherActor &&
+                actor.teacherId != null &&
+                (await _scope.assignments(
+                  actor.teacherId!,
+                )).any((a) => a.classGroupUuid == classGroupUuid)),
+      SupportLearner(:final subjectId, :final classGroupUuid) =>
+        actor is TeacherActor &&
+            await _scope.teaches(
+              actor.teacherId,
+              subjectId,
+              classGroupUuid: classGroupUuid,
+            ),
+      RegisterLearner(:final classGroupUuid) =>
+        actor is AdminActor ||
+            (actor is TeacherActor &&
+                (await _scope.classTeacherOf(
+                  actor.teacherId,
+                )).contains(classGroupUuid)),
+      ManageSchool() => actor is AdminActor,
+    };
+  }
 
   /// Subjects whose notes [actor] may read; null means every subject.
   Future<Set<String>?> readableSubjects(Actor actor) =>
       watchReadableSubjects(actor).first;
 
-  /// [readableSubjects], live: a learner's set follows My subjects and
-  /// their enrolment.
+  /// [readableSubjects], live: a learner receives every subject taught or
+  /// shared with their current class, without choosing subjects separately.
   Stream<Set<String>?> watchReadableSubjects(Actor actor) async* {
-    if (actor is TeacherActor || actor is AdminActor || !await _gated()) {
+    if (authenticated != null && !authenticated!(actor)) {
+      yield const {};
+      return;
+    }
+    if (actor is TeacherActor || actor is AdminActor) {
       yield null;
       return;
     }
@@ -174,14 +184,22 @@ class Policy {
 final policyProvider = Provider<Policy>(
   (ref) => Policy(
     ref.watch(dbProvider),
-    gated: () => ref.read(teacherPinProvider).isSet(),
+    authenticated: (actor) => switch (actor) {
+      TeacherActor(:final teacherId) =>
+        teacherId != null &&
+            ref.read(activeTeacherIdProvider) == teacherId &&
+            ref.read(teacherProfileServiceProvider).valid(teacherId),
+      AdminActor(:final session) =>
+        identical(ref.read(adminSessionProvider), session) && session.isValid,
+      _ => true,
+    },
   ),
 );
 
 /// The actor for the notes a person at the device may read: past the
 /// Teachers PIN is a teacher, otherwise the active learner.
 final notesActorProvider = FutureProvider.autoDispose<Actor>((ref) async {
-  if (ref.watch(teacherUnlockedProvider)) {
+  if (ref.watch(activeTeacherProvider) != null) {
     return TeacherActor(ref.watch(activeTeacherIdProvider));
   }
   final me = await ref.watch(activeStudentProvider.future);

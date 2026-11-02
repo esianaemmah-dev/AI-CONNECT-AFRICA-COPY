@@ -11,6 +11,7 @@ import '../../collaboration/sync/sync_address.dart';
 import '../../db/otic_database.dart';
 import '../../db/providers/db_provider.dart';
 import 'admin_service.dart';
+import '../teacher/teacher_pin_screen.dart';
 
 /// What this device holds from the Admin (null when nothing).
 final adminRecordsStateProvider =
@@ -57,6 +58,15 @@ class _SendRecordsPageState extends ConsumerState<SendRecordsPage> {
       _error = null;
     });
     try {
+      final session = ref.read(adminSessionProvider);
+      if (session == null) throw StateError('Sign in as Admin to send records.');
+      if (_takeover && !session.lease.fresh) {
+        final pin = await askTeacherPin(context, title: 'Confirm Admin PIN');
+        if (pin == null || await ref.read(adminServiceProvider).signIn(pin) == null) return;
+        session.lease.authenticatedAt = DateTime.now();
+        session.lease.lastActivity = DateTime.now();
+      }
+      session.lease.requireValid(sensitive: _takeover);
       final db = ref.read(dbProvider);
       if ((await db.classSyncDao.identity()).schoolId == null) {
         return setState(() => _error = 'Set the school first');
@@ -95,6 +105,9 @@ class _SendRecordsPageState extends ConsumerState<SendRecordsPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(adminSessionProvider, (_, session) {
+      if (session == null) unawaited(_stop());
+    });
     final server = _server;
     return Scaffold(
       appBar: AppBar(title: const Text('Send school records')),

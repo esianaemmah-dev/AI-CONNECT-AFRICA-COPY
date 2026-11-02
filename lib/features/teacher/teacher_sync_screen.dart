@@ -19,6 +19,7 @@ import '../collaborate/join_requests.dart';
 import 'class_devices_panel.dart';
 import 'class_progress_panel.dart';
 import 'class_providers.dart';
+import 'teacher_profiles.dart';
 import 'co_teacher_widgets.dart' show subjectNames;
 
 /// Shares one class/stream's notes with its students' devices on the same
@@ -93,7 +94,9 @@ class _TeacherSyncScreenState extends ConsumerState<TeacherSyncScreen> {
     try {
       final db = ref.read(dbProvider);
       final keyed = await db.classSyncDao.ensureClassKey(group);
-      final server = ClassShareServer(db);
+      final server = ClassShareServer(db,
+        teacherId: ref.read(activeTeacherIdProvider),
+      );
       final port = await server.start(classUuids: {keyed.groupUuid!});
       final announcer = LanDiscoveryService(
         displayName: 'Teacher · ${classLabel(keyed)}',
@@ -155,7 +158,15 @@ class _TeacherSyncScreenState extends ConsumerState<TeacherSyncScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final classesAsync = ref.watch(ownedClassesProvider);
+    ref.listen(activeTeacherProvider, (_, teacher) { if (teacher == null) unawaited(_stop()); });
+    final taught = ref.watch(ownedClassesProvider);
+    final classTeacher = ref.watch(classTeacherGroupsProvider);
+    final classesAsync = taught.whenData(
+      (classes) => visibleClassGroups(
+        classes,
+        classTeacher.valueOrNull ?? const [],
+      ).where((c) => !c.joined).toList(),
+    );
     final identity = ref.watch(syncIdentityProvider).valueOrNull;
     final ac = AppColors.of(context);
 
@@ -175,8 +186,8 @@ class _TeacherSyncScreenState extends ConsumerState<TeacherSyncScreen> {
           if (classes.isEmpty) {
             return ListView(
               padding: const EdgeInsets.all(24),
-              children: [
-                const Text('No classes yet', textAlign: TextAlign.center),
+              children: const [
+                Text('No classes yet', textAlign: TextAlign.center),
               ],
             );
           }
@@ -190,16 +201,16 @@ class _TeacherSyncScreenState extends ConsumerState<TeacherSyncScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               if (!hasSchool) ...[
-                StudioCard(
+                const StudioCard(
                   accent: AppColors.accentOrange,
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.school_outlined,
                         color: AppColors.accentOrange,
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
+                      SizedBox(width: 12),
+                      Expanded(
                         child: Text('School not set — the Admin sets it'),
                       ),
                     ],
@@ -243,8 +254,7 @@ class _TeacherSyncScreenState extends ConsumerState<TeacherSyncScreen> {
                             : Icons.play_arrow_rounded,
                       ),
                 label: Text(
-                  _running ? 'Stop' : 'Sync to class',
-                ),
+                  _running ? 'Stop' : 'Sync to class'),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
@@ -261,6 +271,7 @@ class _TeacherSyncScreenState extends ConsumerState<TeacherSyncScreen> {
                 const SizedBox(height: 12),
                 JoinRequestsCard(
                   server: _server!,
+                  className: classLabel(selected),
                   subjectName: subjectNames(ref),
                 ),
                 const SizedBox(height: 12),

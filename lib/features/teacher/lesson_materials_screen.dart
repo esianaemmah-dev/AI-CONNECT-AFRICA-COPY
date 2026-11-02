@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
@@ -208,7 +209,6 @@ Future<String?> _askSubjectName(BuildContext context) async {
   return trimmed.isEmpty ? null : trimmed;
 }
 
-
 class _SubjectTile extends ConsumerWidget with _SubjectActions {
   const _SubjectTile({required this.subject, super.key});
 
@@ -242,7 +242,8 @@ class _SubjectTile extends ConsumerWidget with _SubjectActions {
     };
     final classes = <({String uuid, String label})>[
       for (final c
-          in ref.watch(ownedClassesProvider).valueOrNull ?? const <ClassGroup>[])
+          in ref.watch(ownedClassesProvider).valueOrNull ??
+              const <ClassGroup>[])
         if (teachesTo.contains(c.groupUuid))
           (uuid: c.groupUuid!, label: classLabel(c)),
     ];
@@ -279,58 +280,62 @@ class _SubjectTile extends ConsumerWidget with _SubjectActions {
                 // Only this teacher's notes, and any nobody owns.
                 for (final r in list)
                   if ((owners[r.resourceTitle] ?? me) == me)
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.description_outlined, size: 20),
-                    title: Text(r.resourceTitle),
-                    subtitle: Text(
-                      [
-                        ResourceLabels.termLabel(context, r.termMarker),
-                        _sharedWith(context, shares[r.resourceTitle], classNames),
-                        ?_onDevices(context, shares[r.resourceTitle], reach),
-                        ?_status(
-                          context,
-                          r,
-                          reading[NoteTextIndexer.noteKey(
-                            subject.subjectId,
-                            r.resourceTitle,
-                          )],
-                          hasPdf: pdfs.containsKey(r.resourceTitle),
-                        ),
-                      ].join(' · '),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (pdfs[r.resourceTitle] case final pdf?)
-                          IconButton(
-                            tooltip: tr(context, 'Open the PDF'),
-                            icon: const Icon(Icons.picture_as_pdf_outlined),
-                            onPressed: () => openNotePdf(context, pdf),
-                          ),
-                        IconButton(
-                          tooltip: tr(context, 'Share with classes'),
-                          icon: Icon(
-                            (shares[r.resourceTitle] ?? const {}).isEmpty
-                                ? Icons.group_add_outlined
-                                : Icons.groups_rounded,
-                          ),
-                          onPressed: () => _share(
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.description_outlined, size: 20),
+                      title: Text(r.resourceTitle),
+                      subtitle: Text(
+                        [
+                          ResourceLabels.termLabel(context, r.termMarker),
+                          _sharedWith(
                             context,
-                            ref,
-                            r,
-                            classes,
-                            shares[r.resourceTitle] ?? const {},
+                            shares[r.resourceTitle],
+                            classNames,
                           ),
-                        ),
-                        IconButton(
-                          tooltip: tr(context, ResourceLabels.removeResource),
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _remove(context, ref, r),
-                        ),
-                      ],
+                          ?_onDevices(context, shares[r.resourceTitle], reach),
+                          ?_status(
+                            context,
+                            r,
+                            reading[NoteTextIndexer.noteKey(
+                              subject.subjectId,
+                              r.resourceTitle,
+                            )],
+                            hasPdf: pdfs.containsKey(r.resourceTitle),
+                          ),
+                        ].join(' · '),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (pdfs[r.resourceTitle] case final pdf?)
+                            IconButton(
+                              tooltip: tr(context, 'Open the PDF'),
+                              icon: const Icon(Icons.picture_as_pdf_outlined),
+                              onPressed: () => openNotePdf(context, pdf),
+                            ),
+                          IconButton(
+                            tooltip: tr(context, 'Share with classes'),
+                            icon: Icon(
+                              (shares[r.resourceTitle] ?? const {}).isEmpty
+                                  ? Icons.group_add_outlined
+                                  : Icons.groups_rounded,
+                            ),
+                            onPressed: () => _share(
+                              context,
+                              ref,
+                              r,
+                              classes,
+                              shares[r.resourceTitle] ?? const {},
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: tr(context, ResourceLabels.removeResource),
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () => _remove(context, ref, r),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
               ],
             ),
           ),
@@ -434,8 +439,9 @@ mixin _SubjectActions {
     // A file named like a note already here is added beside it, never
     // over it.
     final taken = {
-      for (final r
-          in await ref.read(topicResourcesProvider(subject.subjectId).future))
+      for (final r in await ref.read(
+        topicResourcesProvider(subject.subjectId).future,
+      ))
         r.resourceTitle.toLowerCase(),
     };
     String uniqueTitle(String path) {
@@ -526,6 +532,57 @@ mixin _SubjectActions {
       }
       return;
     }
+    final available = await ref.read(ownedClassesProvider.future);
+    final assignments = await ref.read(myAssignmentsProvider.future);
+    final allowed = {
+      for (final a in assignments)
+        if (a.subjectId == subject.subjectId) a.classGroupUuid,
+    };
+    final classes = [
+      for (final c in available)
+        if (allowed.contains(c.groupUuid))
+          (uuid: c.groupUuid!, label: classLabel(c)),
+    ];
+    if (classes.isNotEmpty && context.mounted) {
+      final share = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Materials are ready'),
+          content: const Text(
+            'Share with your class now? Quizzes can finish later.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Later'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Share with class'),
+            ),
+          ],
+        ),
+      );
+      if (share == true) {
+        for (final report in added) {
+          if (!context.mounted) break;
+          await _share(
+            context,
+            ref,
+            ResourceSummary(
+              resourceTitle: report.documentTitle,
+              subjectId: subject.subjectId,
+              topicKey: '',
+              termMarker: 0,
+              chunkCount: report.chunkCount,
+            ),
+            classes,
+            {},
+          );
+        }
+      }
+    }
+    if (!context.mounted) return;
     if (added.length > 1) {
       _toast(
         context,
@@ -539,18 +596,26 @@ mixin _SubjectActions {
     // Name the file the teacher added — never how it was split inside.
     final details = [
       if (report.ocrPages > 0)
-        trFill(context, ResourceLabels.pagesScanned, {'count': '${report.ocrPages}'}),
+        trFill(context, ResourceLabels.pagesScanned, {
+          'count': '${report.ocrPages}',
+        }),
       if (report.diagramCount > 0)
-        trFill(context, ResourceLabels.diagramsMarked, {'count': '${report.diagramCount}'}),
+        trFill(context, ResourceLabels.diagramsMarked, {
+          'count': '${report.diagramCount}',
+        }),
       if (report.unreadablePages > 0)
-        trFill(context, ResourceLabels.pagesUnreadable, {'count': '${report.unreadablePages}'}),
+        trFill(context, ResourceLabels.pagesUnreadable, {
+          'count': '${report.unreadablePages}',
+        }),
       if (report.format == 'pdf' && !report.keptOriginal)
         tr(context, 'Text only — PDF too large to keep'),
     ];
     _toast(
       context,
       [
-        trFill(context, ResourceLabels.fileAdded, {'title': report.documentTitle}),
+        trFill(context, ResourceLabels.fileAdded, {
+          'title': report.documentTitle,
+        }),
         ...details,
       ].join(' · '),
     );
@@ -559,7 +624,11 @@ mixin _SubjectActions {
   /// An assignment travels like a note: share it with classes to send it.
   Future<void> _addAssignment(BuildContext context, WidgetRef ref) async {
     if (!await _mine(context, ref) || !context.mounted) return;
-    final title = await showNewAssignmentDialog(context, ref, subject.subjectId);
+    final title = await showNewAssignmentDialog(
+      context,
+      ref,
+      subject.subjectId,
+    );
     if (title == null) return;
     await _own(ref, title);
     _refresh(ref);
@@ -711,16 +780,19 @@ mixin _SubjectActions {
     Set<String> current,
   ) async {
     if (classes.isEmpty) {
-      _toast(
-        context,
-        tr(context, 'No classes assigned for this subject'),
-      );
+      _toast(context, tr(context, 'No classes assigned for this subject'));
       return;
     }
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getString('last_shared_class_${subject.subjectId}');
+    final initial = current.isNotEmpty
+        ? current
+        : {if (classes.any((c) => c.uuid == last)) last!};
+    if (!context.mounted) return;
     final chosen = await showDialog<Set<String>>(
       context: context,
       builder: (ctx) {
-        final picked = {...current};
+        final picked = {...initial};
         return StatefulBuilder(
           builder: (ctx, setState) => AlertDialog(
             title: Text(
@@ -761,6 +833,12 @@ mixin _SubjectActions {
       },
     );
     if (chosen == null || !context.mounted) return;
+    if (chosen.isNotEmpty)
+      await prefs.setString(
+        'last_shared_class_${subject.subjectId}',
+        chosen.first,
+      );
+    if (!context.mounted) return;
     if (!await _mine(context, ref, resource.resourceTitle)) return;
     final policy = ref.read(policyProvider);
     final me = TeacherActor(ref.read(activeTeacherIdProvider));
@@ -929,7 +1007,9 @@ class _ReadingDialog extends StatelessWidget {
                           child: Text(name),
                         ),
                 ),
-                LinearProgressIndicator(value: total == 0 ? null : page / total),
+                LinearProgressIndicator(
+                  value: total == 0 ? null : page / total,
+                ),
                 if (total > 0) ...[
                   const SizedBox(height: 12),
                   Text(
@@ -949,7 +1029,10 @@ class _ReadingDialog extends StatelessWidget {
             builder: (context, stopping, _) => TextButton(
               onPressed: stopping ? null : () => cancelling.value = true,
               child: Text(
-                tr(context, stopping ? ResourceLabels.cancelling : ResourceLabels.cancel),
+                tr(
+                  context,
+                  stopping ? ResourceLabels.cancelling : ResourceLabels.cancel,
+                ),
               ),
             ),
           ),

@@ -330,6 +330,7 @@ class ClassSyncDao extends DatabaseAccessor<OticDatabase>
             classGroupUuid: uuid,
           ),
         );
+        await registerClassSubjects(uuid, [subjectId]);
       }
     });
   }
@@ -510,20 +511,67 @@ class ClassSyncDao extends DatabaseAccessor<OticDatabase>
           .watch()
           .map((rows) => {for (final r in rows) r.subjectId});
 
-  /// Subjects whose notes [studentId] may read: those they registered for
-  /// in My subjects (classes joined through a teacher), plus every subject
-  /// taught to the class the Admin enrolled them in.
+  /// Sharing a subject registers the class's learners automatically. The
+  /// class check keeps other profiles on a shared device out of this update.
+  Future<void> registerClassSubjects(
+    String classUuid,
+    Iterable<String> subjectIds, {
+    int? studentId,
+  }) => transaction(() async {
+    for (final subjectId in subjectIds.toSet()) {
+      await customInsert(
+        'INSERT OR IGNORE INTO learner_subjects (student_id, subject_id, enrolled_at) '
+        'SELECT s.id, ?1, ?2 FROM students s '
+        'JOIN class_groups c ON c.id = s.class_group_id '
+        'WHERE c.group_uuid = ?3 ${studentId == null ? '' : 'AND s.id = ?4'}',
+        variables: [
+          Variable.withString(subjectId),
+          Variable.withString(DateTime.now().toUtc().toIso8601String()),
+          Variable.withString(classUuid),
+          if (studentId != null) Variable.withInt(studentId),
+        ],
+        updates: {learnerSubjects},
+      );
+    }
+  });
+
+  /// Includes PDF markers, so registration never waits for generated quizzes.
+  /// Received subjects have already passed the sync signature checks.
+  Future<void> registerMaterialSubjects(
+    String classUuid, {
+    int? studentId,
+  }) async {
+    final received = await (selectOnly(topicResources, distinct: true)
+          ..addColumns([topicResources.subjectId])
+          ..where(topicResources.classGroupUuid.equals(classUuid)))
+        .get();
+    await registerClassSubjects(classUuid, {
+      ...await sharedSubjects(classUuid),
+      for (final row in received) row.read(topicResources.subjectId)!,
+    }, studentId: studentId);
+  }
+
+  /// Membership grants every subject shared with the learner's current
+  /// class, including PDFs whose text and quizzes are not ready yet.
   Stream<Set<String>> watchReadable(int studentId) => customSelect(
-    'SELECT subject_id FROM learner_subjects WHERE student_id = ?1 '
-    'UNION '
     'SELECT t.subject_id FROM teaching_assignments t '
-    'JOIN student_enrolments e ON e.class_group_uuid = t.class_group_uuid '
-    "WHERE e.student_id = ?1 AND e.status = 'active'",
+    'JOIN class_groups c ON c.group_uuid = t.class_group_uuid '
+    'JOIN students s ON s.class_group_id = c.id WHERE s.id = ?1 '
+    'UNION '
+    'SELECT r.subject_id FROM topic_resources r '
+    'JOIN class_groups c ON c.group_uuid = r.class_group_uuid '
+    'JOIN students s ON s.class_group_id = c.id WHERE s.id = ?1 '
+    'UNION '
+    'SELECT r.subject_id FROM resource_shares r '
+    'JOIN class_groups c ON c.group_uuid = r.class_group_uuid '
+    'JOIN students s ON s.class_group_id = c.id WHERE s.id = ?1',
     variables: [Variable.withInt(studentId)],
     readsFrom: {
-      learnerSubjects,
+      attachedDatabase.students,
+      classGroups,
+      topicResources,
+      resourceShares,
       attachedDatabase.teachingAssignments,
-      attachedDatabase.studentEnrolments,
     },
   ).watch().map((rows) => {for (final r in rows) r.read<String>('subject_id')});
 

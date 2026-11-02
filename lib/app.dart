@@ -1,4 +1,8 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'shared/widgets/staff_session_scope.dart';
+import 'features/learn/class_learning_panel.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -37,6 +41,12 @@ class _OticAppState extends ConsumerState<OticApp> {
   }
 
   Future<void> _init() async {
+    if (!kIsWeb) {
+      final db = ref.read(dbProvider);
+      await db.customStatement('UPDATE admin_identity SET pin_plain = NULL');
+      await db.customStatement('UPDATE teacher_profiles SET pin_plain = NULL');
+    }
+    await (await SharedPreferences.getInstance()).remove('teacher_pin_plain');
     // Small delay to let Flutter render the splash first
     await Future.delayed(const Duration(milliseconds: 100));
     try {
@@ -79,9 +89,11 @@ class _OticAppState extends ConsumerState<OticApp> {
       final db = ref.read(dbProvider);
       final report = await StorageHousekeeper(db).runSweep();
       if (report.removed > 0) {
-        debugPrint('StorageHousekeeper: ${report.expiredSessions} chat(s) '
-            'aged out past ${kChatHistoryRetention.inDays} days, '
-            '${report.orphanedFiles} orphaned file(s) removed.');
+        debugPrint(
+          'StorageHousekeeper: ${report.expiredSessions} chat(s) '
+          'aged out past ${kChatHistoryRetention.inDays} days, '
+          '${report.orphanedFiles} orphaned file(s) removed.',
+        );
       }
     } catch (e) {
       debugPrint('StorageHousekeeper kickoff failed: $e');
@@ -150,7 +162,7 @@ class _OticAppState extends ConsumerState<OticApp> {
       builder: (context, child) {
         return AppLocale(
           languageCode: languageCode,
-          child: child ?? const SizedBox.shrink(),
+          child: StaffSessionScope(child: child ?? const SizedBox.shrink()),
         );
       },
     );
@@ -225,7 +237,8 @@ class _ModelGateState extends ConsumerState<ModelGate> {
     final modelInfo = ref.watch(modelInfoProvider);
     final packagesReady = ref.watch(classroomPackagesReadyProvider);
 
-    final unpacking = bootstrap.isLoading ||
+    final unpacking =
+        bootstrap.isLoading ||
         (bootstrap.hasValue &&
             bootstrap.value!.extractedAnything &&
             modelInfo.isLoading);
@@ -250,8 +263,8 @@ class _ModelGateState extends ConsumerState<ModelGate> {
                   'Initializing offline classroom systems...',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).hintColor,
-                      ),
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
               ],
             ),
@@ -269,10 +282,17 @@ class _ModelGateState extends ConsumerState<ModelGate> {
         final missingPackages = packagesReady.valueOrNull != true;
         if (missingChat || missingPackages) {
           final err = bootstrap.asData?.value.error;
-          return ModelNotInstalledScreen(
-            info: info,
-            onTryDemo: () => setState(() => _showDemoAnyway = true),
-            bootstrapError: err,
+          return Column(
+            children: [
+              const ClassLearningPanel(),
+              Expanded(
+                child: ModelNotInstalledScreen(
+                  info: info,
+                  onTryDemo: () => setState(() => _showDemoAnyway = true),
+                  bootstrapError: err,
+                ),
+              ),
+            ],
           );
         }
         return widget.child;

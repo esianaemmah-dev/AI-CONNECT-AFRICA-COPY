@@ -122,6 +122,7 @@ class NotePdfStore {
     final tmp = File('${f.path}.part');
     await tmp.writeAsBytes(bytes, flush: true);
     await tmp.rename(f.path);
+    _db.notifyUpdates({TableUpdate.onTable(_db.topicResources)});
     return sha;
   }
 
@@ -170,6 +171,7 @@ class NotePdfStore {
       return false;
     }
     await f.rename((await _file(sha)).path);
+    _db.notifyUpdates({TableUpdate.onTable(_db.topicResources)});
     return true;
   }
 

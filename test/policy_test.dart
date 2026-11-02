@@ -21,7 +21,6 @@ void main() {
   late AdminSession s;
   late int amina, okello, learner;
   late ClassGroup east, west;
-  var gated = true;
   late Policy policy;
 
   setUp(() async {
@@ -38,8 +37,7 @@ void main() {
         projectStore: ProjectStore(root: () async => tmp),
       ),
     );
-    gated = true;
-    policy = Policy(db, gated: () async => gated);
+    policy = Policy(db);
 
     s = (await admin.setUp(name: 'Head', pin: '2468'))!;
     await admin.addTeacher(s, name: 'Amina', pin: '1234');
@@ -125,8 +123,7 @@ void main() {
       await scope.recordOwner(biology, 'Cells', okello);
       expect(
         await policy.can(TeacherActor(okello), UploadNote(biology)),
-        isTrue,
-      );
+        isTrue);
       expect(
         await policy.can(TeacherActor(okello), ChangeNote(biology, 'Cells')),
         isTrue,
@@ -134,8 +131,7 @@ void main() {
       // Only Okello's.
       expect(
         await policy.can(TeacherActor(amina), UploadNote(biology)),
-        isFalse,
-      );
+        isFalse);
       expect(
         await policy.can(
           TeacherActor(okello),
@@ -147,13 +143,13 @@ void main() {
       // Removing the teacher or the subject drops it.
       await admin.deleteSubject(s, biology);
       expect(await scope.ownsSubject(okello, biology), isFalse);
-      final again = (await CustomSubjectService(db).create(name: 'Art 9'))
+      final again = (await CustomSubjectService(db,
+    ).create(name: 'Art 9'))
           .subjectId!;
       await scope.recordOwnSubject(okello, again);
       await admin.removeTeacher(s, okello);
       expect(await scope.ownsSubject(okello, again), isFalse);
-    },
-  );
+    });
 
   test(
     'extra help goes only to classes the teacher teaches that subject',
@@ -239,10 +235,79 @@ void main() {
     expect(await policy.readableSubjects(const TeacherActor(null)), isNull);
   });
 
-  test('with no Teachers PIN nothing is gated', () async {
-    gated = false;
-    await admin.enrol(s, studentId: learner, group: west, academicYear: 2026);
-    expect(await policy.readableSubjects(LearnerActor(learner)), isNull);
-    expect(await policy.readableSubjects(const GuestActor()), isNull);
+  test('learner access follows the class independently of Teachers PIN',
+    () async {
+      await admin.enrol(s, studentId: learner, group: west, academicYear: 2026);
+    expect(await policy.readableSubjects(LearnerActor(learner)), isEmpty);
+      expect(await policy.readableSubjects(const GuestActor()), isEmpty);
+    },
+  );
+
+  test(
+    'class materials are readable without subject registration and follow class changes live',
+    () async {
+      await db.topicResourceDao.insertChunk(
+        subjectId: 'new_subject',
+        topicKey: '~pdf',
+        termMarker: 0,
+        resourceTitle: 'New book',
+        contentChunk: 'PDF marker',
+        classGroupUuid: east.groupUuid,
+      );
+      await db.topicResourceDao.insertChunk(
+        subjectId: 'other_class',
+        topicKey: '~pdf',
+        termMarker: 0,
+        resourceTitle: 'Other book',
+        contentChunk: 'PDF marker',
+        classGroupUuid: west.groupUuid,
+      );
+      // Old subject choices cannot grant access to another class's notes.
+      await db.classSyncDao.setEnrolled(learner, 'other_class', true);
+      expect(
+        await policy.can(LearnerActor(learner), const ReadNotes('new_subject')),
+        isTrue,
+      );
+      expect(
+        await policy.can(LearnerActor(learner), const ReadNotes('other_class')),
+        isFalse,
+      );
+      final moved = policy
+          .watchReadableSubjects(LearnerActor(learner))
+          .firstWhere((subjects) => subjects?.contains('other_class') ?? false);
+      await admin.enrol(s, studentId: learner, group: west, academicYear: 2026);
+      expect(await moved, {'other_class'});
+      expect(
+        await policy.can(LearnerActor(learner), const ReadNotes('new_subject')),
+        isFalse,
+      );
+    },
+  );
+  test('Admin recovery requires a one-use code and revokes existing sessions', () async {
+    expect(await admin.recoverPin('5678'), isFalse);
+    final code = await admin.createRecoveryCode(s);
+    expect(await admin.recoverPin('5678', recoveryCode: 'wrong'), isFalse);
+    expect(await admin.recoverPin('5678', recoveryCode: code), isTrue);
+    expect(s.isValid, isFalse);
+    expect(() => admin.addClass(s, className: 'Forbidden'), throwsStateError);
+    final next = await admin.signIn('5678');
+    expect(next, isNotNull);
+    expect(await admin.recoverPin('9999', recoveryCode: code), isFalse);
+    final row = (await db.select(db.adminIdentity).get()).single;
+    expect(row.pinPlain, isNull);
+    expect(row.recoveryHash, isNotNull, reason: 'recovery rotates at next authenticated sign-in');
+    expect(row.recoveryHash, isNot(admin.pendingRecoveryCode));
   });
+
+  test('revoked Admin sessions and reset teacher credentials lose service access', () async {
+    final profiles = TeacherProfileService(db);
+    expect(await profiles.signIn(amina, '1234'), isNotNull);
+    expect(profiles.valid(amina), isTrue);
+    expect(await admin.resetTeacherPin(s, amina, '4567'), isTrue);
+    expect(profiles.valid(amina), isFalse);
+    s.lease.revoked = true;
+    expect(() => admin.addLearner(s, name: 'Blocked'), throwsStateError);
+    expect(() => admin.createRecoveryCode(s), throwsStateError);
+  });
+
 }

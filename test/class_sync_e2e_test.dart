@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:ai_connect_africa/collaboration/sync/class_crypto.dart';
+import 'package:ai_connect_africa/core/policy/policy.dart';
+import 'package:ai_connect_africa/services/notes/note_quiz_store.dart';
 import 'package:ai_connect_africa/collaboration/sync/selective_sync_manager.dart';
 import 'package:ai_connect_africa/collaboration/sync/class_share_server.dart';
 import 'package:ai_connect_africa/collaboration/sync/device_registry.dart';
@@ -201,6 +203,81 @@ void main() {
     expect(result.ok, isFalse);
     expect(result.error, contains('Hilltop College'));
     expect(await (db.select(db.classGroups)).get(), isEmpty);
+  });
+
+  test(
+    'approval enrols the learner on both devices and repeated joins do not duplicate them',
+    () async {
+      final (db, manager) = await student();
+      final id = await db.studentDao.createStudent(
+        StudentsCompanion.insert(name: 'Amina'),
+      );
+      final code = (await server.openJoinCode(east))!;
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final result = await manager.joinClass(
+          teachers: [endpoint],
+          typedCode: code,
+          studentId: id,
+        );
+        expect(result.ok, isTrue, reason: result.error);
+        final local = (await db.select(db.students).get()).single;
+        final remote = (await teacher.select(teacher.students).get()).single;
+        expect(local.uuid, isNotNull);
+        expect(remote.uuid, local.uuid);
+        expect(local.classGroupId, result.group!.id);
+        expect(remote.classGroupId, east.id);
+        final enrolledHere =
+            (await db.select(db.studentEnrolments).get()).single;
+        final enrolledThere =
+            (await teacher.select(teacher.studentEnrolments).get()).single;
+        expect(enrolledHere.uuid, enrolledThere.uuid);
+        expect(enrolledHere.status, 'active');
+        expect(await db.classSyncDao.enrolledSubjects(id), ['chemistry', 'physics']);
+        expect(await teacher.classSyncDao.enrolledSubjects(remote.id), ['chemistry', 'physics']);
+      }
+    },
+  );
+
+  test('new shared subjects register only class members and unchanged sync repairs registration', () async {
+    final (db, manager) = await student();
+    final id = await db.studentDao.createStudent(StudentsCompanion.insert(name: 'Amina'));
+    final joined = await manager.joinClass(
+      teachers: [endpoint], typedCode: (await server.openJoinCode(east))!, studentId: id,
+    );
+    expect(joined.ok, isTrue, reason: joined.error);
+    final group = joined.group!;
+    final otherClass = await db.classGroupDao.createClass(className: 'Other class');
+    final other = await db.studentDao.createStudent(StudentsCompanion.insert(name: 'Brian'));
+    await db.classGroupDao.assignLearner(other, otherClass);
+    final classmate = await db.studentDao.createStudent(StudentsCompanion.insert(name: 'Cate'));
+    await db.classGroupDao.assignLearner(classmate, group.id);
+    const subject = 'newly_shared_subject';
+    await _note(teacher, subject, 'New notes', 'These notes were shared after joining.');
+    await teacher.classSyncDao.setShares(
+      subjectId: subject, documentTitle: 'New notes', classUuids: {east.groupUuid!},
+    );
+    final enrolledOnTeacher = (await teacher.select(teacher.students).get()).single;
+    expect(await teacher.classSyncDao.enrolledSubjects(enrolledOnTeacher.id), contains(subject));
+    expect(await db.classSyncDao.enrolledSubjects(id), isNot(contains(subject)));
+    final first = await manager.syncClass(teacher: endpoint, group: group);
+    expect(first.ok, isTrue, reason: first.error);
+    for (final learner in [id, classmate]) {
+      expect(await db.classSyncDao.enrolledSubjects(learner), containsAll(['chemistry', 'physics', subject]));
+    }
+    expect(await db.classSyncDao.enrolledSubjects(other), isEmpty);
+    final later = await db.studentDao.createStudent(
+      StudentsCompanion.insert(name: 'David'),
+    );
+    await db.classGroupDao.assignLearner(later, group.id);
+    expect(await db.classSyncDao.enrolledSubjects(later),
+        containsAll(['chemistry', 'physics', subject]));
+    await db.classSyncDao.setEnrolled(id, subject, false);
+    final again = await manager.syncClass(teacher: endpoint, group: group);
+    expect(again.ok, isTrue, reason: again.error);
+    expect(again.subjectsUpdated, 0);
+    final registered = await db.classSyncDao.enrolledSubjects(id);
+    expect(registered, contains(subject));
+    expect(registered, hasLength(3));
   });
 
   test('wrong codes fail, and too many lock every code', () async {
@@ -411,7 +488,8 @@ void main() {
     );
     expect(result.ok, isFalse);
     expect(result.error, startsWith('Could not sync with 10.255.255.1.'));
-  });
+  },
+  );
 
   test('an edited note replaces the old copy, with no duplicates', () async {
     final (db, m) = await student();
@@ -634,7 +712,8 @@ void main() {
     final first = await teacher.classSyncDao.ensureClassKey(east);
     final again = await teacher.classSyncDao.ensureClassKey(east);
     expect(again.classKey, first.classKey);
-  });
+  },
+  );
 
   // ── One teacher device; students enroll ─────────────────────────────────
 
@@ -671,7 +750,8 @@ void main() {
         'listed or deleted as its own', () async {
       final (db, m) = await student();
       await _note(db, 'carpentry', 'Joints', 'A mortise joint holds a tenon.');
-      await _note(teacher, 'carpentry', 'Joints', 'A dovetail resists pulling.');
+      await _note(teacher, 'carpentry', 'Joints', 'A dovetail resists pulling.',
+      );
       await teacher.classSyncDao.setShares(
         subjectId: 'carpentry',
         documentTitle: 'Joints',
@@ -742,11 +822,13 @@ void main() {
       expect(mine.single.grade, 9);
       expect(mine.single.feedback, 'Good');
       expect(mine.single.createdAt, received.single.createdAt,
-          reason: 'when it was made, apart from when it synced');
+          reason: 'when it was made, apart from when it synced',
+      );
 
       // Syncing again changes nothing.
       await m.syncClass(teacher: endpoint, group: g);
-      expect((await teacher.select(teacher.assignmentSubmissions).get()).length, 1);
+      expect((await teacher.select(teacher.assignmentSubmissions).get()).length, 1,
+      );
     });
 
     test('a class’s students are offered only the subjects taught to it',
@@ -772,9 +854,10 @@ void main() {
       final g = await join(m, east);
       await m.syncClass(teacher: endpoint, group: g);
       expect({for (final s in await db.customSubjectDao.all()) s.name}, {
-        'Carpentry',
-      });
-    });
+        'Carpentry'},
+        );
+      },
+    );
 
     test('the teacher’s subjects reach students, and follow the teacher’s '
         'edits and removals', () async {
@@ -808,7 +891,8 @@ void main() {
       ]);
       expect(ok.map((s) => s.id), ['carpentry']);
       expect(ok.single.color, '#00AA00');
-    });
+    },
+    );
 
     test('a classmate can’t offer subjects', () async {
       await CustomSubjectService(teacher).create(name: 'Carpentry');
@@ -822,7 +906,8 @@ void main() {
         icon: 'menu_book',
         color: '#000000',
       );
-      final s = ClassShareServer(a, role: ShareRole.classmate, joinRounds: _rounds);
+      final s = ClassShareServer(a, role: ShareRole.classmate, joinRounds: _rounds,
+      );
       _autoDecide(s);
       final port = await s.start(classUuids: {ga.groupUuid!}, port: 0);
       cleanups.add(s.stop);
@@ -837,7 +922,7 @@ void main() {
       expect(await b.customSubjectDao.all(), isEmpty);
     });
 
-    test('the subjects a learner takes reach the teacher', () async {
+    test('all class subjects reach the teacher despite old subject choices', () async {
       final (db, m) = await student();
       final g = await join(m, east);
       final id = await db
@@ -852,8 +937,9 @@ void main() {
       final seen = await teacher.classSyncDao
           .watchMemberReports(east.groupUuid!)
           .first;
-      expect(seen.single.report.enrolled, ['chemistry', 'biology']);
-    });
+      expect(seen.single.report.enrolled, ['chemistry', 'physics']);
+      },
+    );
   });
 
   // ── Progress back to the teacher ────────────────────────────────────────
@@ -984,14 +1070,22 @@ void main() {
       final asked = _autoDecide(strict, accept: false);
       final at = await teacherServer(strict);
       final (db, m) = await student();
+      final id = await db.studentDao.createStudent(
+        StudentsCompanion.insert(name: 'Amina'),
+      );
       final result = await m.joinClass(
         teachers: [at],
         typedCode: (await strict.openJoinCode(east))!,
-        name: 'Amina',
+        studentId: id,
       );
       expect(result.ok, isFalse);
       expect(asked, ['Amina']);
       expect(await db.select(db.classGroups).get(), isEmpty);
+      expect(await db.select(db.studentEnrolments).get(), isEmpty);
+      expect(await teacher.select(teacher.students).get(), isEmpty);
+      expect(await teacher.select(teacher.studentEnrolments).get(), isEmpty);
+      expect(await db.classSyncDao.enrolledSubjects(id), isEmpty);
+      expect(await teacher.select(teacher.learnerSubjects).get(), isEmpty);
     });
 
     test('nobody answering is a no', () async {
@@ -1077,7 +1171,8 @@ void main() {
       await join(mc, east);
       await pull(mc, s2, at2, ga);
       expect(await notesOf(c), await notesOf(a));
-    });
+    },
+    );
 
     test('a device that never joined through the teacher is refused',
         () async {
@@ -1124,7 +1219,8 @@ void main() {
       await mb.syncClass(teacher: endpoint, group: gb);
       final before = await notesOf(b);
 
-      await (a.update(a.topicResources)
+      await (a.update(a.topicResources,
+      )
             ..where((t) => t.resourceTitle.equals('Forces')))
           .write(
             const TopicResourcesCompanion(
@@ -1150,7 +1246,8 @@ void main() {
           .write(const TopicResourcesCompanion(contentChunk: Value(forged)));
       // Recompute the digest over the edited chunk and sign it — with a key
       // that isn't the teacher's.
-      final rows = await a.classSyncDao.receivedChunks(ga.groupUuid!, 'physics');
+      final rows = await a.classSyncDao.receivedChunks(ga.groupUuid!, 'physics',
+      );
       final ids = [
         for (final r in rows)
           ResourceChunkEnvelope.forChannel(
@@ -1166,7 +1263,8 @@ void main() {
           ).chunkId,
       ];
       final digest = await channelDigest(ids);
-      await (a.update(a.syncState)..where((t) => t.subjectId.equals('physics')))
+      await (a.update(a.syncState,
+      )..where((t) => t.subjectId.equals('physics')))
           .write(
             SyncStateCompanion(
               channelDigest: Value(digest),
@@ -1188,7 +1286,8 @@ void main() {
       final (b, mb) = await student();
       await join(mb, east);
       final result = await pull(mb, s, at, ga);
-      expect(result.rejected.map((r) => r.reason), contains(contains('teacher')));
+      expect(result.rejected.map((r) => r.reason), contains(contains('teacher')),
+      );
       expect((await notesOf(b)).values.join(), isNot(contains(forged)));
     });
 
@@ -1231,15 +1330,18 @@ void main() {
       final (s, at) = await sharing(a, ga);
       await pull(mc, s, at, ga);
       expect((await notesOf(c)).keys, isNot(contains('Forces')));
-    });
+    },
+    );
 
     test('a classmate never deletes anything', () async {
       final (a, ga) = await synced();
       // A no longer has physics at all.
-      await (a.delete(a.topicResources)
+      await (a.delete(a.topicResources,
+      )
             ..where((t) => t.subjectId.equals('physics')))
           .go();
-      await (a.delete(a.syncState)..where((t) => t.subjectId.equals('physics')))
+      await (a.delete(a.syncState,
+      )..where((t) => t.subjectId.equals('physics')))
           .go();
       final (b, mb) = await student();
       final gb = await join(mb, east);
@@ -1302,6 +1404,107 @@ void main() {
       expect(again.pdfsFetched, 0, reason: 'already on the device');
     });
 
+    test('every joined device can read a PDF before text or quizzes exist, and gets quizzes later',
+      () async {
+        const subject = 'new_class_subject';
+        const title = 'Freshly uploaded book';
+        final sha = (await teacherPdfs.put(pdf))!;
+        await teacherPdfs.recordOwn(
+          subjectId: subject,
+          documentTitle: title,
+          sha: sha,
+          pages: 3,
+          bytes: pdf.length,
+        );
+        await teacher.classSyncDao.setShares(
+          subjectId: subject,
+          documentTitle: title,
+          classUuids: {east.groupUuid!},
+        );
+        final devices =
+            <
+              (
+                OticDatabase,
+                SelectiveSyncManager,
+                NotePdfStore,
+                ClassGroup,
+                int,
+              )
+            >[];
+        for (var i = 0; i < 2; i++) {
+          final (db, manager, store) = await pdfStudent();
+          // Same display name must still create two distinct learners.
+          final id = await db.studentDao.createStudent(
+            StudentsCompanion.insert(name: 'Amina'),
+          );
+          final result = await manager.joinClass(
+            teachers: [endpoint],
+            typedCode: (await server.openJoinCode(east))!,
+            studentId: id,
+          );
+          expect(result.ok, isTrue, reason: result.error);
+          final group = result.group!;
+          final synced = await manager.syncClass(
+            teacher: endpoint,
+            group: group,
+          );
+          expect(synced.ok, isTrue, reason: synced.error);
+          expect(synced.pdfsFetched, 1);
+          expect(await store.has(sha), isTrue);
+          expect(
+            await db.classSyncDao.enrolledSubjects(id),
+            contains(subject),
+            reason: 'sharing automatically registers the learner',
+          );
+          expect(
+            await Policy(db).can(LearnerActor(id), const ReadNotes(subject)),
+            isTrue,
+          );
+          expect(
+            await db.topicResourceDao.chunksForSubject(
+              subjectId: subject,
+              visibleClassUuid: group.groupUuid,
+            ),
+            isEmpty,
+          );
+          expect(
+            await NoteQuizStore(
+              db,
+            ).questions(subject, classUuid: group.groupUuid),
+            isEmpty,
+          );
+          devices.add((db, manager, store, group, id));
+        }
+        expect(await teacher.select(teacher.students).get(), hasLength(2));
+        await teacher.topicResourceDao.insertQuizRow(
+          subjectId: subject,
+          documentTitle: title,
+          termMarker: 0,
+          content:
+              '[QUIZ: page=1] {"question":"What is an acid?","options":["A","B","C","D"],"correctIndex":0,"explanation":"A"}',
+        );
+        for (final (db, manager, store, group, id) in devices) {
+          final synced = await manager.syncClass(
+            teacher: endpoint,
+            group: group,
+          );
+          expect(synced.ok, isTrue, reason: synced.error);
+          expect(synced.pdfsFetched, 0);
+          expect(
+            await NoteQuizStore(
+              db,
+            ).questions(subject, classUuid: group.groupUuid),
+            hasLength(1),
+          );
+          expect(await store.has(sha), isTrue);
+          expect(
+            await Policy(db).can(LearnerActor(id), const ReadNotes(subject)),
+            isTrue,
+          );
+        }
+      },
+    );
+
     test('never goes to a class the note isn’t shared with', () async {
       await keepOnTeacher();
       final (_, m, store) = await pdfStudent();
@@ -1314,7 +1517,8 @@ void main() {
     test('a file that doesn’t match the signed hash is refused', () async {
       final sha = await keepOnTeacher();
       // Swapped on disk after the note was recorded.
-      await File('${teacherPdfDir.path}${Platform.pathSeparator}$sha.pdf')
+      await File('${teacherPdfDir.path}${Platform.pathSeparator}$sha.pdf',
+      )
           .writeAsBytes(utf8.encode('%PDF-1.4 something else'));
       final (_, m, store) = await pdfStudent();
       final group = await join(m, east);
@@ -1349,7 +1553,8 @@ void main() {
       expect(r.pdfsFetched, 1);
       expect(await (await store.fileFor(sha))!.readAsBytes(), big);
       expect(await store.partialLength(sha), 0);
-    });
+    },
+    );
 
     test('a damaged part is thrown away and the next sync starts over',
         () async {
@@ -1364,7 +1569,8 @@ void main() {
       final again = await m.syncClass(teacher: endpoint, group: group);
       expect(again.pdfsFetched, 1);
       expect(await (await store.fileFor(sha))!.readAsBytes(), pdf);
-    });
+    },
+    );
 
     test('unsharing the note removes the PDF too', () async {
       final sha = await keepOnTeacher();
@@ -1411,14 +1617,14 @@ void main() {
       final quick = Stopwatch()..start();
       final small = await other.syncClass(
         teacher: endpoint,
-        group: otherGroup,
-      );
+        group: otherGroup);
       quick.stop();
       final r = await download;
       clock.stop();
       // ignore: avoid_print
       print('15 MB PDF sync: ${clock.elapsedMilliseconds} ms; other '
-          'student’s sync meanwhile: ${quick.elapsedMilliseconds} ms');
+          'student’s sync meanwhile: ${quick.elapsedMilliseconds} ms',
+      );
 
       expect(r.ok, isTrue, reason: r.error);
       expect(r.pdfsFetched, 1, reason: 'counted through syncClassEverywhere');
@@ -1444,7 +1650,8 @@ void main() {
         () async {
       final (db, m) = await student();
       final group = await join(m, east);
-      final members = await DeviceRegistry(teacher).watchMembers(east.groupUuid!).first;
+      final members = await DeviceRegistry(teacher,
+        ).watchMembers(east.groupUuid!).first;
       expect(members, hasLength(1));
       expect(members.single.boxKey, isNotNull);
       expect(
@@ -1453,7 +1660,8 @@ void main() {
       );
       expect((await m.syncClass(teacher: endpoint, group: group)).ok, isTrue);
       expect(members.single.revokedAt, isNull);
-    });
+    },
+    );
 
     test('is refused; the others get the new key and keep syncing', () async {
       final (lostDb, lost) = await student();
@@ -1482,7 +1690,8 @@ void main() {
         isEmpty,
       );
       expect((await fresh(lostDb, lostGroup)).classKey, lostGroup.classKey,
-          reason: 'a revoked device never learns the new key');
+          reason: 'a revoked device never learns the new key',
+      );
 
       final synced = await kept.syncClass(teacher: endpoint, group: keptGroup);
       expect(synced.ok, isTrue, reason: synced.error);
@@ -1534,21 +1743,27 @@ void main() {
         reason: 'one trusted device can’t receive the new key',
       );
       expect((await old.syncClass(teacher: endpoint, group: oldGroup)).ok,
-          isFalse);
+          isFalse,
+        );
       final rejoined = await join(old, east);
       expect((await old.syncClass(teacher: endpoint, group: rejoined)).ok,
-          isTrue);
-    });
+          isTrue,
+        );
+      },
+    );
 
     test('revoked for the whole school: refused in every class it holds',
         () async {
       final (db, m) = await student();
       final group = await join(m, east);
       final key = (await DeviceRegistry(db).myKeys())['device_key']!;
-      await DeviceRegistry(teacher).revokeSchoolWide(key, name: 'Lost tablet');
+      await DeviceRegistry(teacher,
+        ).revokeSchoolWide(key, name: 'Lost tablet');
       expect((await fresh(teacher, east)).classKey, isNot(group.classKey));
-      expect((await m.syncClass(teacher: endpoint, group: group)).ok, isFalse);
-    });
+      expect((await m.syncClass(teacher: endpoint, group: group)).ok, isFalse,
+        );
+      },
+    );
   });
 
   group('what has reached other devices', () {
@@ -1583,7 +1798,8 @@ void main() {
         memberKey: 'local/$amina',
       );
       expect((await db.select(db.assignmentSubmissions).get()).single.receivedAt,
-          isNull);
+          isNull,
+      );
       await m.syncClass(teacher: endpoint, group: g);
       final mine = (await db.select(db.assignmentSubmissions).get()).single;
       expect(mine.receivedAt, isNotNull);
@@ -1621,6 +1837,7 @@ void main() {
           .deviceKey;
       await registry.revoke(east.groupUuid!, aKey);
       expect(await onDevices(), lessThan(2));
-    });
+    },
+    );
   });
 }

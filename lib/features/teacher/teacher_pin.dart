@@ -42,17 +42,12 @@ class TeacherPin {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_saltKey, salt);
     await prefs.setString(_hashKey, await hashPinStrong(salt, pin));
-    await prefs.setString(_plainKey, pin);
+    await prefs.remove(_plainKey);
   }
 
   /// The Teachers PIN in the clear, for the Admin to look up; null when
   /// none is set, or when it was set before this was stored.
-  Future<String?> plain() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_hashKey) == null
-        ? null
-        : prefs.getString(_plainKey);
-  }
+  Future<String?> plain() async => null;
 
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
@@ -155,7 +150,7 @@ bool isTeacherRoute(String location) =>
 /// Null to carry on. `/teachers` itself needs only the Teachers PIN.
 String? teacherProfileRedirect(Uri uri, {required bool signedIn}) {
   final path = uri.path;
-  if (path != '/teacher' && !path.startsWith('/teacher/')) return null;
+  if (path != '/teacher' && !path.startsWith('/teacher/') && !path.startsWith('/teachers/')) return null;
   return signedIn ? null : '/teachers';
 }
 

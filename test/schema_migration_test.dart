@@ -25,6 +25,31 @@ import 'package:path/path.dart' as p;
 /// at 0 even when they already held the badge those counters back — see the
 /// schema-15 tests below.
 void main() {
+  test('v37 credentials migrate without plaintext or losing learner records', () async {
+    final dir = await Directory.systemTemp.createTemp('staff_security_migration');
+    final file = File(p.join(dir.path, 'school.sqlite'));
+    final before = OticDatabase.forTesting(NativeDatabase(file));
+    await before.into(before.adminIdentity).insert(AdminIdentityCompanion.insert(
+      id: const Value(1), name: 'Head', pinSalt: 'salt', pinHash: 'preserved-hash',
+      pinPlain: const Value('1234'), createdAt: '2026-01-01'));
+    await before.into(before.students).insert(StudentsCompanion.insert(name: 'Amina'));
+    await before.customStatement('ALTER TABLE admin_identity DROP COLUMN recovery_salt');
+    await before.customStatement('ALTER TABLE admin_identity DROP COLUMN recovery_hash');
+    await before.customStatement('PRAGMA user_version = 37');
+    await before.close();
+    final after = OticDatabase.forTesting(NativeDatabase(file));
+    try {
+      final admin = (await after.select(after.adminIdentity).get()).single;
+      expect(admin.pinHash, 'preserved-hash');
+      expect(admin.pinPlain, isNull);
+      expect(admin.recoveryHash, isNull);
+      expect((await after.select(after.students).get()).single.name, 'Amina');
+    } finally {
+      await after.close();
+      await dir.delete(recursive: true);
+    }
+  });
+
   test('upgrading a pre-11 database does not throw on ClassGroups.groupUuid',
       () async {
     // The relevant slice of schema 10 — enough for the full 10→N upgrade

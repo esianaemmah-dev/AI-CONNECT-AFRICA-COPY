@@ -136,7 +136,7 @@ class OticDatabase extends _$OticDatabase {
   OticDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 37;
+  int get schemaVersion => 38;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -148,6 +148,17 @@ class OticDatabase extends _$OticDatabase {
       await _createUuidTriggers();
     },
     onUpgrade: (m, from, to) async {
+      if (from < 38) {
+        for (final (name, column) in [
+          ('recovery_salt', adminIdentity.recoverySalt),
+          ('recovery_hash', adminIdentity.recoveryHash),
+        ]) {
+          if (!await _columnExists('admin_identity', name) && await _tableExists('admin_identity')) {
+            await m.addColumn(adminIdentity, column);
+          }
+        }
+      }
+
       if (from < 2) {
         await m.createTable(learningPaths);
       }
@@ -769,6 +780,8 @@ class OticDatabase extends _$OticDatabase {
           }
         }
       }
+      await customStatement('UPDATE admin_identity SET pin_plain = NULL');
+      await customStatement('UPDATE teacher_profiles SET pin_plain = NULL');
     },
   );
 

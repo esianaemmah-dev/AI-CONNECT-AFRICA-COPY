@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../services/auth/local_auth.dart';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,12 @@ class TeacherProfileService {
   TeacherProfileService(this._db);
 
   final OticDatabase _db;
+  static final _databaseLeases = Expando<Map<int, StaffLease>>();
+  Map<int, StaffLease> get leases => _databaseLeases[_db] ??= {};
+  bool valid(int id) => leases[id]?.valid ?? false;
+  void signOut(int id) {
+    leases.remove(id)?.revoked = true;
+  }
 
   Stream<List<TeacherProfile>> watchAll() => (_db.select(
     _db.teacherProfiles,
@@ -35,7 +42,10 @@ class TeacherProfileService {
       _db.teacherProfiles,
     )..where((t) => t.id.equals(teacherId))).getSingleOrNull();
     if (row == null) return null;
-    if (!await pinMatches(row.pinSalt, pin, row.pinHash)) {
+    if (!await LocalAuthThrottle().check(
+      'teacher:$teacherId',
+      () => pinMatches(row.pinSalt, pin, row.pinHash),
+    )) {
       await AuditLogService(
         _db,
       ).record('device', 'refused.teacher_pin', detail: 'teacher:$teacherId');
@@ -50,6 +60,8 @@ class TeacherProfileService {
         ),
       );
     }
+    leases[teacherId]?.revoked = true;
+    leases[teacherId] = StaffLease();
     return row;
   }
 
@@ -90,7 +102,10 @@ const kSessionLife = Duration(minutes: 60);
 final activeTeacherProvider = StateProvider<TeacherProfile?>((ref) {
   Timer? expiry;
   ref.onDispose(() => expiry?.cancel());
-  ref.listenSelf((_, next) {
+  ref.listenSelf((previous, next) {
+    if (previous != null && previous.id != next?.id) {
+      ref.read(teacherProfileServiceProvider).signOut(previous.id);
+    }
     expiry?.cancel();
     if (next != null) {
       expiry = Timer(kSessionLife, () => ref.controller.state = null);

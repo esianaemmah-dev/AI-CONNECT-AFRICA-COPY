@@ -8,6 +8,7 @@ import '../../db/otic_database.dart';
 import '../../features/teacher/teaching_scope.dart';
 import '../../services/audit/audit_log.dart';
 import '../sync/class_crypto.dart';
+import '../sync/class_enrolment.dart';
 import '../sync/device_registry.dart';
 import 'admin_records_crypto.dart';
 
@@ -62,9 +63,8 @@ class AdminRecords {
         }
         final state = await _state();
         final version =
-            [admin.recordsVersion, state?.version ?? 0].reduce(
-              (a, b) => a > b ? a : b,
-            ) +
+            [admin.recordsVersion, state?.version ?? 0,
+            ].reduce((a, b) => a > b ? a : b) +
             1;
         await (_db.update(_db.adminIdentity)..where((t) => t.id.equals(1)))
             .write(AdminIdentityCompanion(recordsVersion: Value(version)));
@@ -492,31 +492,27 @@ class AdminRecords {
       // Learners a Class Teacher registered here: in these records means
       // the Admin has them; otherwise they keep their enrolment until the
       // Admin takes them.
-      final inRecords = learnerId.values.toSet();
+      final inRecords = {
+        for (final e in await _db.select(_db.studentEnrolments).get()) e.uuid,
+      };
       final now = DateTime.now().toUtc().toIso8601String();
       for (final reg in await (_db.select(
         _db.learnerRegistrations,
       )..where((t) => t.sentAt.isNull())).get()) {
-        if (inRecords.contains(reg.studentId)) {
+        if (inRecords.contains(reg.enrolmentUuid)) {
           await (_db.update(_db.learnerRegistrations)
                 ..where((t) => t.id.equals(reg.id)))
               .write(LearnerRegistrationsCompanion(sentAt: Value(now)));
           continue;
         }
-        await _db
-            .into(_db.studentEnrolments)
-            .insert(
-              StudentEnrolmentsCompanion.insert(
-                uuid: reg.enrolmentUuid,
-                studentId: reg.studentId,
-                classGroupUuid: reg.classGroupUuid,
-                academicYear: DateTime.now().year,
-                createdAt: reg.createdAt,
-              ),
-              mode: InsertMode.insertOrIgnore,
-            );
         final group = await _db.classGroupDao.findByUuid(reg.classGroupUuid);
-        await _db.classGroupDao.assignLearner(reg.studentId, group?.id);
+        if (group != null) {
+          await ClassEnrolment(_db).enrol(
+            studentId: reg.studentId,
+            group: group,
+            enrolmentUuid: reg.enrolmentUuid,
+          );
+        }
       }
 
       // What this device serves follows the new assignments.
@@ -612,8 +608,9 @@ class AdminRecords {
   }
 
   /// On the Admin's device: takes learners registered by Class Teachers —
-  /// only into a class/stream the Admin gave that teacher. A learner already
-  /// here (the same uuid) is left as is, so repeating a sync adds nothing.
+  /// only into a class/stream the Admin gave that teacher. Existing learners
+  /// keep their portable identity; an enrolment already received is not
+  /// replayed, so an old registration cannot undo a later Admin decision.
   /// Returns how many were taken and refused.
   Future<({int taken, int refused})> takeRegistrations(
     List<Map<String, Object?>> registrations,
@@ -648,7 +645,7 @@ class AdminRecords {
           teacher != null &&
           group != null &&
           !group.joined &&
-          (await TeachingScope(_db).classTeacherOf(teacher.id)).contains(c);
+          await ClassEnrolment(_db).mayEnrol(teacher.id, c);
       if (!allowed) {
         refused++;
         await audit.record(
@@ -661,32 +658,27 @@ class AdminRecords {
       final existing = await (_db.select(
         _db.students,
       )..where((x) => x.uuid.equals(learner))).getSingleOrNull();
-      if (existing != null) {
+      final knownEnrolment = await (_db.select(
+        _db.studentEnrolments,
+      )..where((x) => x.uuid.equals(e))).getSingleOrNull();
+      if (knownEnrolment != null) {
         taken++;
         continue;
       }
       final now = DateTime.now().toUtc().toIso8601String();
       final id = await _db.transaction(() async {
-        final id = await _db.studentDao.createStudent(
+        final id =
+            existing?.id ??
+            await _db.studentDao.createStudent(
           StudentsCompanion.insert(name: name.trim(), uuid: Value(learner)),
         );
-        await _db
-            .into(_db.studentEnrolments)
-            .insert(
-              StudentEnrolmentsCompanion.insert(
-                uuid: e,
-                studentId: id,
-                classGroupUuid: c,
-                academicYear: year,
-                createdAt: now,
-              ),
-              mode: InsertMode.insertOrIgnore,
-            );
-        await _db.classGroupDao.assignLearner(id, group.id);
-        await _db
-            .into(_db.learnerRegistrations)
-            .insert(
-              LearnerRegistrationsCompanion.insert(
+        await ClassEnrolment(_db).enrol(
+          studentId: id,
+          group: group,
+          enrolmentUuid: e,
+          academicYear: year,
+        );
+        final registration = LearnerRegistrationsCompanion.insert(
                 studentId: id,
                 teacherId: teacher.id,
                 classGroupUuid: c,
@@ -695,8 +687,15 @@ class AdminRecords {
                     ? r['registered_at'] as String
                     : now,
                 sentAt: Value(now),
+              );
+        await _db
+            .into(_db.learnerRegistrations)
+            .insert(
+              registration,
+              onConflict: DoUpdate(
+                (_) => registration,
+                target: [_db.learnerRegistrations.studentId],
               ),
-              mode: InsertMode.insertOrIgnore,
             );
         return id;
       });
@@ -740,6 +739,9 @@ class AdminRecords {
               name: name,
               pinSalt: salt,
               pinHash: hash,
+              pinPlain: const Value(null),
+              recoverySalt: const Value(null),
+              recoveryHash: const Value(null),
               createdAt: DateTime.now().toUtc().toIso8601String(),
               signingSeed: Value(seed),
               recordsVersion: Value(state.version),

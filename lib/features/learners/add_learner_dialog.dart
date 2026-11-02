@@ -1,3 +1,4 @@
+import '../admin/admin_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,11 +22,15 @@ Future<int?> showAddLearnerDialog(
     builder: (_) => _AddLearnerDialog(initialClassGroupId: initialClassGroupId),
   );
   if (result == null) return null;
-  return ref.read(studentNotifierProvider.notifier).addLearner(
+  try { return await ref.read(studentNotifierProvider.notifier).addLearner(
         name: result.name,
         grade: result.grade,
         classGroupId: result.classGroupId,
-      );
+      ); } on StateError {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Ask your class teacher to approve enrolment.')));
+    return null;
+  }
 }
 
 class _NewLearner {
@@ -67,8 +72,10 @@ class _AddLearnerDialogState extends ConsumerState<_AddLearnerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final classes =
-        ref.watch(classGroupsProvider).valueOrNull ?? const <ClassGroup>[];
+    final admin = ref.watch(adminSessionProvider);
+    final classes = admin?.isValid == true
+        ? ref.watch(classGroupsProvider).valueOrNull ?? const <ClassGroup>[]
+        : ref.watch(classTeacherGroupsProvider).valueOrNull ?? const <ClassGroup>[];
     return AlertDialog(
       title: Text(tr(context, 'Add learner')),
       content: SizedBox(

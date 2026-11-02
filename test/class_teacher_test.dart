@@ -1,6 +1,9 @@
 import 'dart:io';
 
 import 'package:ai_connect_africa/collaboration/admin/admin_records_share.dart';
+import 'package:ai_connect_africa/collaboration/sync/class_enrolment.dart';
+import 'package:ai_connect_africa/collaboration/sync/class_share_server.dart';
+import 'package:ai_connect_africa/collaboration/sync/selective_sync_manager.dart';
 import 'package:ai_connect_africa/core/policy/policy.dart';
 import 'package:ai_connect_africa/db/otic_database.dart';
 import 'package:ai_connect_africa/features/admin/admin_service.dart';
@@ -67,9 +70,10 @@ void main() {
   });
 
   Future<int> teacherId(OticDatabase db, String name) async =>
-      (await TeacherProfileService(db).all()).firstWhere((t) => t.name == name).id;
+      (await TeacherProfileService(db,
+      ).all()).firstWhere((t) => t.name == name).id;
 
-  Policy policyOf(OticDatabase db) => Policy(db, gated: () async => true);
+  Policy policyOf(OticDatabase db) => Policy(db);
 
   test('the Admin enrols a Class Teacher with their classes/streams',
       () async {
@@ -93,7 +97,8 @@ void main() {
       isNull,
     );
     final okello = await teacherId(adminDb, 'Mr Okello');
-    expect(await TeacherProfileService(adminDb).signIn(okello, '1234'), isNotNull);
+    expect(await TeacherProfileService(adminDb).signIn(okello, '1234'), isNotNull,
+    );
     final policy = policyOf(adminDb);
     expect(
       await policy.can(TeacherActor(okello), RegisterLearner(east.groupUuid!)),
@@ -112,7 +117,8 @@ void main() {
       isFalse,
     );
     // Registering learners is all the role gives.
-    expect(await policy.can(TeacherActor(okello), const UploadNote('maths')), isFalse);
+    expect(await policy.can(TeacherActor(okello), const UploadNote('maths')), isFalse,
+    );
 
     await admin.setClassTeacherClasses(session, okello, {west.groupUuid!});
     expect(
@@ -166,8 +172,127 @@ void main() {
     );
 
     Future<List<String>> adminLearners() async => [
-      for (final s in await adminDb.select(adminDb.students).get()) s.name,
-    ]..sort();
+      for (final s in await adminDb.select(adminDb.students).get()) s.name]
+          ..sort();
+
+    test(
+      'an approved class join reaches the Admin and other devices with the same learner identity',
+      () async {
+        final phone = device();
+        expect(await sync(phone), isNull);
+        final okello = await teacherId(phone, 'Mr Okello');
+        final group = (await ClassTeacherService(
+          phone,
+          policyOf(phone),
+        ).classesOf(okello)).single;
+        final learnerDevice = device();
+        final studentId = await learnerDevice.studentDao.createStudent(
+          StudentsCompanion.insert(name: 'Amina'),
+        );
+        final sharing = ClassShareServer(
+          phone,
+          teacherId: okello,
+          joinRounds: _rounds,
+        );
+        final manager = SelectiveSyncManager(
+          learnerDevice,
+          joinRounds: _rounds,
+        );
+        final requests = <PendingJoin>[];
+        final subscription = sharing.pendingJoinsStream.listen((pending) {
+          for (final request in pending) {
+            requests.add(request);
+            sharing.decide(request.id, accept: true);
+          }
+        });
+        try {
+          final syncPort = await sharing.start(
+            classUuids: {group.groupUuid!},
+            port: 0,
+          );
+          final result = await manager.joinClass(
+            teachers: [(address: '127.0.0.1', port: syncPort)],
+            typedCode: (await sharing.openJoinCode(group))!,
+            studentId: studentId,
+          );
+          expect(result.ok, isTrue, reason: result.error);
+          expect(requests.single.name, 'Amina');
+          expect(requests.single.classUuid, east.groupUuid);
+        } finally {
+          manager.dispose();
+          await sharing.stop();
+          await subscription.cancel();
+        }
+        final uuid = (await learnerDevice.select(learnerDevice.students).get())
+            .single
+            .uuid;
+        final enrolled =
+            (await phone.select(phone.studentEnrolments).get()).single;
+        expect(await sync(phone), isNull);
+        final onAdmin = (await adminDb.select(adminDb.students).get()).single;
+        expect(onAdmin.uuid, uuid);
+        expect(onAdmin.classGroupId, east.id);
+        expect(
+          (await adminDb.select(adminDb.studentEnrolments).get()).single.uuid,
+          enrolled.uuid,
+        );
+        final other = device();
+        expect(await sync(other), isNull);
+        final learner = (await other.select(other.students).get()).single;
+        expect(learner.uuid, uuid);
+        final otherClass = await other.classGroupDao.findByUuid(
+          east.groupUuid!,
+        );
+        expect(learner.classGroupId, otherClass!.id);
+        expect(
+          (await other.select(other.studentEnrolments).get()).single.uuid,
+          enrolled.uuid,
+        );
+        expect(await sync(phone), isNull);
+        expect(await adminLearners(), ['Amina']);
+      },
+    );
+
+    test(
+      'approval can enrol an existing school learner without duplicating their profile',
+      () async {
+        final id = (await admin.addLearner(session, name: 'Amina'))!;
+        await admin.enrol(
+          session,
+          studentId: id,
+          group: west,
+          academicYear: 2026,
+        );
+        final phone = device();
+        expect(await sync(phone), isNull);
+        final okello = await teacherId(phone, 'Mr Okello');
+        final here = (await phone.select(phone.students).get()).single;
+        final group = (await ClassTeacherService(
+          phone,
+          policyOf(phone),
+        ).classesOf(okello)).single;
+        final approved = await ClassEnrolment(phone).approve(
+          learnerUuid: here.uuid!,
+          name: here.name,
+          group: group,
+          teacherId: okello,
+        );
+        expect(await sync(phone), isNull);
+        final onAdmin = (await adminDb.select(adminDb.students).get()).single;
+        expect(onAdmin.id, id);
+        expect(onAdmin.classGroupId, east.id);
+        final active = await (adminDb.select(
+          adminDb.studentEnrolments,
+        )..where((t) => t.status.equals('active'))).get();
+        expect(active.single.uuid, approved.uuid);
+        expect(await sync(phone), isNull);
+        expect(await adminLearners(), ['Amina']);
+        expect(
+          await adminDb.select(adminDb.studentEnrolments).get(),
+          hasLength(2),
+        );
+      },
+    );
 
     test('learners registered on the Class Teacher’s device reach the Admin',
         () async {
@@ -180,14 +305,16 @@ void main() {
 
       for (final name in ['Amina', 'Brian']) {
         expect(
-          await service.register(teacherId: okello, name: name, group: mine.single),
+          await service.register(teacherId: okello, name: name, group: mine.single,
+            ),
           isNull,
         );
       }
       final westHere = (await phone.select(phone.classGroups).get())
           .firstWhere((c) => c.streamName == 'West');
       expect(
-        await service.register(teacherId: okello, name: 'Cate', group: westHere),
+        await service.register(teacherId: okello, name: 'Cate', group: westHere,
+          ),
         isNotNull,
         reason: 'not one of his classes',
       );
@@ -212,11 +339,13 @@ void main() {
       expect(phoneLearners.length, 2);
       final eastHere = (await phone.select(phone.classGroups).get())
           .firstWhere((c) => c.streamName == 'East');
-      expect(phoneLearners.every((s) => s.classGroupId == eastHere.id), isTrue);
+      expect(phoneLearners.every((s) => s.classGroupId == eastHere.id), isTrue,
+        );
 
       expect(await sync(phone), isNull);
       expect(await adminLearners(), ['Amina', 'Brian']);
-    });
+    },
+    );
 
     test('declined: nothing is taken and the registrations wait', () async {
       final phone = device();

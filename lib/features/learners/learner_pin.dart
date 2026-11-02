@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import '../../services/auth/local_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,7 +31,7 @@ class LearnerPinService {
     if (row == null) return false;
     final hash = row.pinHash, salt = row.pinSalt;
     if (hash == null || salt == null) return true;
-    if (!await pinMatches(salt, pin, hash)) return false;
+    if (!await LocalAuthThrottle().check('learner:$studentId', () => pinMatches(salt, pin, hash))) return false;
     if (pinNeedsUpgrade(hash)) {
       await (_db.update(
         _db.students,

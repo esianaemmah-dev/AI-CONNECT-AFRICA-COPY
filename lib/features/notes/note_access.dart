@@ -58,7 +58,7 @@ class NotRegisteredForNotes extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            tr(context, 'Register for this subject to read its notes'),
+            tr(context, 'Join your class to read its learning materials'),
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.of(context).textSecondary),
           ),
