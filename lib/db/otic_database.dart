@@ -35,6 +35,7 @@ import 'tables/co_teaching_classes_table.dart';
 import 'tables/custom_subjects_table.dart';
 import 'tables/earned_badges_table.dart';
 import 'tables/failover_tables.dart';
+import 'tables/gals_tables.dart';
 import 'tables/learner_subjects_table.dart';
 import 'tables/learning_paths_table.dart';
 import 'tables/audit_log_table.dart';
@@ -104,6 +105,10 @@ part 'otic_database.g.dart';
     ClassTeacherAssignments,
     LearnerRegistrations,
     TeacherSubjects,
+    GalsChampions,
+    GalsSharingSessions,
+    GalsSessionTools,
+    GalsSessionAttendance,
   ],
   daos: [
     StudentDao,
@@ -136,7 +141,7 @@ class OticDatabase extends _$OticDatabase {
   OticDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 38;
+  int get schemaVersion => 39;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -782,6 +787,17 @@ class OticDatabase extends _$OticDatabase {
       }
       await customStatement('UPDATE admin_identity SET pin_plain = NULL');
       await customStatement('UPDATE teacher_profiles SET pin_plain = NULL');
+      if (from < 39) {
+        // Local-only GALS data, separate from school learner/admin records.
+        for (final (name, create) in [
+          ('gals_champions', () => m.createTable(galsChampions)),
+          ('gals_sharing_sessions', () => m.createTable(galsSharingSessions)),
+          ('gals_session_tools', () => m.createTable(galsSessionTools)),
+          ('gals_session_attendance', () => m.createTable(galsSessionAttendance)),
+        ]) {
+          if (!await _tableExists(name)) await create();
+        }
+      }
     },
   );
 
