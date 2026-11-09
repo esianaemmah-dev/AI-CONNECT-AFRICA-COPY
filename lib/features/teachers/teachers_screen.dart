@@ -256,6 +256,7 @@ class _TeacherDevicesCard extends ConsumerWidget {
               ),
             for (final (icon, title, path) in const [
               (Icons.groups_outlined, 'Classes & learners', '/teacher'),
+              (Icons.route_outlined, 'GALS · draft field tools', '/teacher/gals'),
               (
                 Icons.folder_copy_outlined,
                 'Lesson materials',

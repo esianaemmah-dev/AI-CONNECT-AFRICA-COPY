@@ -23403,6 +23403,1628 @@ class TeacherSubjectsCompanion extends UpdateCompanion<TeacherSubject> {
   }
 }
 
+class $GalsChampionsTable extends GalsChampions
+    with TableInfo<$GalsChampionsTable, GalsChampion> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalsChampionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sexMeta = const VerificationMeta('sex');
+  @override
+  late final GeneratedColumn<String> sex = GeneratedColumn<String>(
+    'sex',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _ageBandMeta = const VerificationMeta(
+    'ageBand',
+  );
+  @override
+  late final GeneratedColumn<String> ageBand = GeneratedColumn<String>(
+    'age_band',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _locationMeta = const VerificationMeta(
+    'location',
+  );
+  @override
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+    'location',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    displayName,
+    sex,
+    ageBand,
+    location,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gals_champions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GalsChampion> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('sex')) {
+      context.handle(
+        _sexMeta,
+        sex.isAcceptableOrUnknown(data['sex']!, _sexMeta),
+      );
+    }
+    if (data.containsKey('age_band')) {
+      context.handle(
+        _ageBandMeta,
+        ageBand.isAcceptableOrUnknown(data['age_band']!, _ageBandMeta),
+      );
+    }
+    if (data.containsKey('location')) {
+      context.handle(
+        _locationMeta,
+        location.isAcceptableOrUnknown(data['location']!, _locationMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GalsChampion map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalsChampion(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      sex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sex'],
+      ),
+      ageBand: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}age_band'],
+      ),
+      location: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GalsChampionsTable createAlias(String alias) {
+    return $GalsChampionsTable(attachedDatabase, alias);
+  }
+}
+
+class GalsChampion extends DataClass implements Insertable<GalsChampion> {
+  final String id;
+  final String displayName;
+  final String? sex;
+  final String? ageBand;
+  final String? location;
+  final String createdAt;
+  final String updatedAt;
+  const GalsChampion({
+    required this.id,
+    required this.displayName,
+    this.sex,
+    this.ageBand,
+    this.location,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['display_name'] = Variable<String>(displayName);
+    if (!nullToAbsent || sex != null) {
+      map['sex'] = Variable<String>(sex);
+    }
+    if (!nullToAbsent || ageBand != null) {
+      map['age_band'] = Variable<String>(ageBand);
+    }
+    if (!nullToAbsent || location != null) {
+      map['location'] = Variable<String>(location);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  GalsChampionsCompanion toCompanion(bool nullToAbsent) {
+    return GalsChampionsCompanion(
+      id: Value(id),
+      displayName: Value(displayName),
+      sex: sex == null && nullToAbsent ? const Value.absent() : Value(sex),
+      ageBand: ageBand == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ageBand),
+      location: location == null && nullToAbsent
+          ? const Value.absent()
+          : Value(location),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory GalsChampion.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalsChampion(
+      id: serializer.fromJson<String>(json['id']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      sex: serializer.fromJson<String?>(json['sex']),
+      ageBand: serializer.fromJson<String?>(json['ageBand']),
+      location: serializer.fromJson<String?>(json['location']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'displayName': serializer.toJson<String>(displayName),
+      'sex': serializer.toJson<String?>(sex),
+      'ageBand': serializer.toJson<String?>(ageBand),
+      'location': serializer.toJson<String?>(location),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  GalsChampion copyWith({
+    String? id,
+    String? displayName,
+    Value<String?> sex = const Value.absent(),
+    Value<String?> ageBand = const Value.absent(),
+    Value<String?> location = const Value.absent(),
+    String? createdAt,
+    String? updatedAt,
+  }) => GalsChampion(
+    id: id ?? this.id,
+    displayName: displayName ?? this.displayName,
+    sex: sex.present ? sex.value : this.sex,
+    ageBand: ageBand.present ? ageBand.value : this.ageBand,
+    location: location.present ? location.value : this.location,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  GalsChampion copyWithCompanion(GalsChampionsCompanion data) {
+    return GalsChampion(
+      id: data.id.present ? data.id.value : this.id,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      sex: data.sex.present ? data.sex.value : this.sex,
+      ageBand: data.ageBand.present ? data.ageBand.value : this.ageBand,
+      location: data.location.present ? data.location.value : this.location,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsChampion(')
+          ..write('id: $id, ')
+          ..write('displayName: $displayName, ')
+          ..write('sex: $sex, ')
+          ..write('ageBand: $ageBand, ')
+          ..write('location: $location, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    displayName,
+    sex,
+    ageBand,
+    location,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalsChampion &&
+          other.id == this.id &&
+          other.displayName == this.displayName &&
+          other.sex == this.sex &&
+          other.ageBand == this.ageBand &&
+          other.location == this.location &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
+  final Value<String> id;
+  final Value<String> displayName;
+  final Value<String?> sex;
+  final Value<String?> ageBand;
+  final Value<String?> location;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const GalsChampionsCompanion({
+    this.id = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.sex = const Value.absent(),
+    this.ageBand = const Value.absent(),
+    this.location = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GalsChampionsCompanion.insert({
+    required String id,
+    required String displayName,
+    this.sex = const Value.absent(),
+    this.ageBand = const Value.absent(),
+    this.location = const Value.absent(),
+    required String createdAt,
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       displayName = Value(displayName),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GalsChampion> custom({
+    Expression<String>? id,
+    Expression<String>? displayName,
+    Expression<String>? sex,
+    Expression<String>? ageBand,
+    Expression<String>? location,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (displayName != null) 'display_name': displayName,
+      if (sex != null) 'sex': sex,
+      if (ageBand != null) 'age_band': ageBand,
+      if (location != null) 'location': location,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GalsChampionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? displayName,
+    Value<String?>? sex,
+    Value<String?>? ageBand,
+    Value<String?>? location,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return GalsChampionsCompanion(
+      id: id ?? this.id,
+      displayName: displayName ?? this.displayName,
+      sex: sex ?? this.sex,
+      ageBand: ageBand ?? this.ageBand,
+      location: location ?? this.location,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (sex.present) {
+      map['sex'] = Variable<String>(sex.value);
+    }
+    if (ageBand.present) {
+      map['age_band'] = Variable<String>(ageBand.value);
+    }
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsChampionsCompanion(')
+          ..write('id: $id, ')
+          ..write('displayName: $displayName, ')
+          ..write('sex: $sex, ')
+          ..write('ageBand: $ageBand, ')
+          ..write('location: $location, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GalsSharingSessionsTable extends GalsSharingSessions
+    with TableInfo<$GalsSharingSessionsTable, GalsSharingSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalsSharingSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _championIdMeta = const VerificationMeta(
+    'championId',
+  );
+  @override
+  late final GeneratedColumn<String> championId = GeneratedColumn<String>(
+    'champion_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<String> occurredAt = GeneratedColumn<String>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    championId,
+    occurredAt,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gals_sharing_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GalsSharingSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('champion_id')) {
+      context.handle(
+        _championIdMeta,
+        championId.isAcceptableOrUnknown(data['champion_id']!, _championIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_championIdMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GalsSharingSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalsSharingSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      championId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}champion_id'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GalsSharingSessionsTable createAlias(String alias) {
+    return $GalsSharingSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class GalsSharingSession extends DataClass
+    implements Insertable<GalsSharingSession> {
+  final String id;
+  final String championId;
+  final String occurredAt;
+  final String createdAt;
+  final String updatedAt;
+  const GalsSharingSession({
+    required this.id,
+    required this.championId,
+    required this.occurredAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['champion_id'] = Variable<String>(championId);
+    map['occurred_at'] = Variable<String>(occurredAt);
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  GalsSharingSessionsCompanion toCompanion(bool nullToAbsent) {
+    return GalsSharingSessionsCompanion(
+      id: Value(id),
+      championId: Value(championId),
+      occurredAt: Value(occurredAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory GalsSharingSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalsSharingSession(
+      id: serializer.fromJson<String>(json['id']),
+      championId: serializer.fromJson<String>(json['championId']),
+      occurredAt: serializer.fromJson<String>(json['occurredAt']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'championId': serializer.toJson<String>(championId),
+      'occurredAt': serializer.toJson<String>(occurredAt),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  GalsSharingSession copyWith({
+    String? id,
+    String? championId,
+    String? occurredAt,
+    String? createdAt,
+    String? updatedAt,
+  }) => GalsSharingSession(
+    id: id ?? this.id,
+    championId: championId ?? this.championId,
+    occurredAt: occurredAt ?? this.occurredAt,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  GalsSharingSession copyWithCompanion(GalsSharingSessionsCompanion data) {
+    return GalsSharingSession(
+      id: data.id.present ? data.id.value : this.id,
+      championId: data.championId.present
+          ? data.championId.value
+          : this.championId,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsSharingSession(')
+          ..write('id: $id, ')
+          ..write('championId: $championId, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, championId, occurredAt, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalsSharingSession &&
+          other.id == this.id &&
+          other.championId == this.championId &&
+          other.occurredAt == this.occurredAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
+  final Value<String> id;
+  final Value<String> championId;
+  final Value<String> occurredAt;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const GalsSharingSessionsCompanion({
+    this.id = const Value.absent(),
+    this.championId = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GalsSharingSessionsCompanion.insert({
+    required String id,
+    required String championId,
+    required String occurredAt,
+    required String createdAt,
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       championId = Value(championId),
+       occurredAt = Value(occurredAt),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GalsSharingSession> custom({
+    Expression<String>? id,
+    Expression<String>? championId,
+    Expression<String>? occurredAt,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (championId != null) 'champion_id': championId,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GalsSharingSessionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? championId,
+    Value<String>? occurredAt,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return GalsSharingSessionsCompanion(
+      id: id ?? this.id,
+      championId: championId ?? this.championId,
+      occurredAt: occurredAt ?? this.occurredAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (championId.present) {
+      map['champion_id'] = Variable<String>(championId.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<String>(occurredAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsSharingSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('championId: $championId, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GalsSessionToolsTable extends GalsSessionTools
+    with TableInfo<$GalsSessionToolsTable, GalsSessionTool> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalsSessionToolsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<String> sessionId = GeneratedColumn<String>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<String> packId = GeneratedColumn<String>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toolIdMeta = const VerificationMeta('toolId');
+  @override
+  late final GeneratedColumn<String> toolId = GeneratedColumn<String>(
+    'tool_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentVersionMeta = const VerificationMeta(
+    'contentVersion',
+  );
+  @override
+  late final GeneratedColumn<String> contentVersion = GeneratedColumn<String>(
+    'content_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sessionId,
+    packId,
+    toolId,
+    contentVersion,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gals_session_tools';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GalsSessionTool> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packIdMeta);
+    }
+    if (data.containsKey('tool_id')) {
+      context.handle(
+        _toolIdMeta,
+        toolId.isAcceptableOrUnknown(data['tool_id']!, _toolIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toolIdMeta);
+    }
+    if (data.containsKey('content_version')) {
+      context.handle(
+        _contentVersionMeta,
+        contentVersion.isAcceptableOrUnknown(
+          data['content_version']!,
+          _contentVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentVersionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    sessionId,
+    packId,
+    toolId,
+    contentVersion,
+  };
+  @override
+  GalsSessionTool map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalsSessionTool(
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      )!,
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      toolId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tool_id'],
+      )!,
+      contentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_version'],
+      )!,
+    );
+  }
+
+  @override
+  $GalsSessionToolsTable createAlias(String alias) {
+    return $GalsSessionToolsTable(attachedDatabase, alias);
+  }
+}
+
+class GalsSessionTool extends DataClass implements Insertable<GalsSessionTool> {
+  final String sessionId;
+  final String packId;
+  final String toolId;
+  final String contentVersion;
+  const GalsSessionTool({
+    required this.sessionId,
+    required this.packId,
+    required this.toolId,
+    required this.contentVersion,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['session_id'] = Variable<String>(sessionId);
+    map['pack_id'] = Variable<String>(packId);
+    map['tool_id'] = Variable<String>(toolId);
+    map['content_version'] = Variable<String>(contentVersion);
+    return map;
+  }
+
+  GalsSessionToolsCompanion toCompanion(bool nullToAbsent) {
+    return GalsSessionToolsCompanion(
+      sessionId: Value(sessionId),
+      packId: Value(packId),
+      toolId: Value(toolId),
+      contentVersion: Value(contentVersion),
+    );
+  }
+
+  factory GalsSessionTool.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalsSessionTool(
+      sessionId: serializer.fromJson<String>(json['sessionId']),
+      packId: serializer.fromJson<String>(json['packId']),
+      toolId: serializer.fromJson<String>(json['toolId']),
+      contentVersion: serializer.fromJson<String>(json['contentVersion']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sessionId': serializer.toJson<String>(sessionId),
+      'packId': serializer.toJson<String>(packId),
+      'toolId': serializer.toJson<String>(toolId),
+      'contentVersion': serializer.toJson<String>(contentVersion),
+    };
+  }
+
+  GalsSessionTool copyWith({
+    String? sessionId,
+    String? packId,
+    String? toolId,
+    String? contentVersion,
+  }) => GalsSessionTool(
+    sessionId: sessionId ?? this.sessionId,
+    packId: packId ?? this.packId,
+    toolId: toolId ?? this.toolId,
+    contentVersion: contentVersion ?? this.contentVersion,
+  );
+  GalsSessionTool copyWithCompanion(GalsSessionToolsCompanion data) {
+    return GalsSessionTool(
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      packId: data.packId.present ? data.packId.value : this.packId,
+      toolId: data.toolId.present ? data.toolId.value : this.toolId,
+      contentVersion: data.contentVersion.present
+          ? data.contentVersion.value
+          : this.contentVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsSessionTool(')
+          ..write('sessionId: $sessionId, ')
+          ..write('packId: $packId, ')
+          ..write('toolId: $toolId, ')
+          ..write('contentVersion: $contentVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(sessionId, packId, toolId, contentVersion);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalsSessionTool &&
+          other.sessionId == this.sessionId &&
+          other.packId == this.packId &&
+          other.toolId == this.toolId &&
+          other.contentVersion == this.contentVersion);
+}
+
+class GalsSessionToolsCompanion extends UpdateCompanion<GalsSessionTool> {
+  final Value<String> sessionId;
+  final Value<String> packId;
+  final Value<String> toolId;
+  final Value<String> contentVersion;
+  final Value<int> rowid;
+  const GalsSessionToolsCompanion({
+    this.sessionId = const Value.absent(),
+    this.packId = const Value.absent(),
+    this.toolId = const Value.absent(),
+    this.contentVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GalsSessionToolsCompanion.insert({
+    required String sessionId,
+    required String packId,
+    required String toolId,
+    required String contentVersion,
+    this.rowid = const Value.absent(),
+  }) : sessionId = Value(sessionId),
+       packId = Value(packId),
+       toolId = Value(toolId),
+       contentVersion = Value(contentVersion);
+  static Insertable<GalsSessionTool> custom({
+    Expression<String>? sessionId,
+    Expression<String>? packId,
+    Expression<String>? toolId,
+    Expression<String>? contentVersion,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (sessionId != null) 'session_id': sessionId,
+      if (packId != null) 'pack_id': packId,
+      if (toolId != null) 'tool_id': toolId,
+      if (contentVersion != null) 'content_version': contentVersion,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GalsSessionToolsCompanion copyWith({
+    Value<String>? sessionId,
+    Value<String>? packId,
+    Value<String>? toolId,
+    Value<String>? contentVersion,
+    Value<int>? rowid,
+  }) {
+    return GalsSessionToolsCompanion(
+      sessionId: sessionId ?? this.sessionId,
+      packId: packId ?? this.packId,
+      toolId: toolId ?? this.toolId,
+      contentVersion: contentVersion ?? this.contentVersion,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (packId.present) {
+      map['pack_id'] = Variable<String>(packId.value);
+    }
+    if (toolId.present) {
+      map['tool_id'] = Variable<String>(toolId.value);
+    }
+    if (contentVersion.present) {
+      map['content_version'] = Variable<String>(contentVersion.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsSessionToolsCompanion(')
+          ..write('sessionId: $sessionId, ')
+          ..write('packId: $packId, ')
+          ..write('toolId: $toolId, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GalsSessionAttendanceTable extends GalsSessionAttendance
+    with TableInfo<$GalsSessionAttendanceTable, GalsSessionAttendanceData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalsSessionAttendanceTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<String> sessionId = GeneratedColumn<String>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sexMeta = const VerificationMeta('sex');
+  @override
+  late final GeneratedColumn<String> sex = GeneratedColumn<String>(
+    'sex',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ageBandMeta = const VerificationMeta(
+    'ageBand',
+  );
+  @override
+  late final GeneratedColumn<String> ageBand = GeneratedColumn<String>(
+    'age_band',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _locationMeta = const VerificationMeta(
+    'location',
+  );
+  @override
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+    'location',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _countMeta = const VerificationMeta('count');
+  @override
+  late final GeneratedColumn<int> count = GeneratedColumn<int>(
+    'count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    sessionId,
+    sex,
+    ageBand,
+    location,
+    count,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gals_session_attendance';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GalsSessionAttendanceData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('sex')) {
+      context.handle(
+        _sexMeta,
+        sex.isAcceptableOrUnknown(data['sex']!, _sexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sexMeta);
+    }
+    if (data.containsKey('age_band')) {
+      context.handle(
+        _ageBandMeta,
+        ageBand.isAcceptableOrUnknown(data['age_band']!, _ageBandMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_ageBandMeta);
+    }
+    if (data.containsKey('location')) {
+      context.handle(
+        _locationMeta,
+        location.isAcceptableOrUnknown(data['location']!, _locationMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_locationMeta);
+    }
+    if (data.containsKey('count')) {
+      context.handle(
+        _countMeta,
+        count.isAcceptableOrUnknown(data['count']!, _countMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_countMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GalsSessionAttendanceData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalsSessionAttendanceData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      )!,
+      sex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sex'],
+      )!,
+      ageBand: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}age_band'],
+      )!,
+      location: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location'],
+      )!,
+      count: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}count'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GalsSessionAttendanceTable createAlias(String alias) {
+    return $GalsSessionAttendanceTable(attachedDatabase, alias);
+  }
+}
+
+class GalsSessionAttendanceData extends DataClass
+    implements Insertable<GalsSessionAttendanceData> {
+  final String id;
+  final String sessionId;
+  final String sex;
+  final String ageBand;
+  final String location;
+  final int count;
+  final String createdAt;
+  const GalsSessionAttendanceData({
+    required this.id,
+    required this.sessionId,
+    required this.sex,
+    required this.ageBand,
+    required this.location,
+    required this.count,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['session_id'] = Variable<String>(sessionId);
+    map['sex'] = Variable<String>(sex);
+    map['age_band'] = Variable<String>(ageBand);
+    map['location'] = Variable<String>(location);
+    map['count'] = Variable<int>(count);
+    map['created_at'] = Variable<String>(createdAt);
+    return map;
+  }
+
+  GalsSessionAttendanceCompanion toCompanion(bool nullToAbsent) {
+    return GalsSessionAttendanceCompanion(
+      id: Value(id),
+      sessionId: Value(sessionId),
+      sex: Value(sex),
+      ageBand: Value(ageBand),
+      location: Value(location),
+      count: Value(count),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory GalsSessionAttendanceData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalsSessionAttendanceData(
+      id: serializer.fromJson<String>(json['id']),
+      sessionId: serializer.fromJson<String>(json['sessionId']),
+      sex: serializer.fromJson<String>(json['sex']),
+      ageBand: serializer.fromJson<String>(json['ageBand']),
+      location: serializer.fromJson<String>(json['location']),
+      count: serializer.fromJson<int>(json['count']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sessionId': serializer.toJson<String>(sessionId),
+      'sex': serializer.toJson<String>(sex),
+      'ageBand': serializer.toJson<String>(ageBand),
+      'location': serializer.toJson<String>(location),
+      'count': serializer.toJson<int>(count),
+      'createdAt': serializer.toJson<String>(createdAt),
+    };
+  }
+
+  GalsSessionAttendanceData copyWith({
+    String? id,
+    String? sessionId,
+    String? sex,
+    String? ageBand,
+    String? location,
+    int? count,
+    String? createdAt,
+  }) => GalsSessionAttendanceData(
+    id: id ?? this.id,
+    sessionId: sessionId ?? this.sessionId,
+    sex: sex ?? this.sex,
+    ageBand: ageBand ?? this.ageBand,
+    location: location ?? this.location,
+    count: count ?? this.count,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  GalsSessionAttendanceData copyWithCompanion(
+    GalsSessionAttendanceCompanion data,
+  ) {
+    return GalsSessionAttendanceData(
+      id: data.id.present ? data.id.value : this.id,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      sex: data.sex.present ? data.sex.value : this.sex,
+      ageBand: data.ageBand.present ? data.ageBand.value : this.ageBand,
+      location: data.location.present ? data.location.value : this.location,
+      count: data.count.present ? data.count.value : this.count,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsSessionAttendanceData(')
+          ..write('id: $id, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('sex: $sex, ')
+          ..write('ageBand: $ageBand, ')
+          ..write('location: $location, ')
+          ..write('count: $count, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, sessionId, sex, ageBand, location, count, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalsSessionAttendanceData &&
+          other.id == this.id &&
+          other.sessionId == this.sessionId &&
+          other.sex == this.sex &&
+          other.ageBand == this.ageBand &&
+          other.location == this.location &&
+          other.count == this.count &&
+          other.createdAt == this.createdAt);
+}
+
+class GalsSessionAttendanceCompanion
+    extends UpdateCompanion<GalsSessionAttendanceData> {
+  final Value<String> id;
+  final Value<String> sessionId;
+  final Value<String> sex;
+  final Value<String> ageBand;
+  final Value<String> location;
+  final Value<int> count;
+  final Value<String> createdAt;
+  final Value<int> rowid;
+  const GalsSessionAttendanceCompanion({
+    this.id = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.sex = const Value.absent(),
+    this.ageBand = const Value.absent(),
+    this.location = const Value.absent(),
+    this.count = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GalsSessionAttendanceCompanion.insert({
+    required String id,
+    required String sessionId,
+    required String sex,
+    required String ageBand,
+    required String location,
+    required int count,
+    required String createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sessionId = Value(sessionId),
+       sex = Value(sex),
+       ageBand = Value(ageBand),
+       location = Value(location),
+       count = Value(count),
+       createdAt = Value(createdAt);
+  static Insertable<GalsSessionAttendanceData> custom({
+    Expression<String>? id,
+    Expression<String>? sessionId,
+    Expression<String>? sex,
+    Expression<String>? ageBand,
+    Expression<String>? location,
+    Expression<int>? count,
+    Expression<String>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sessionId != null) 'session_id': sessionId,
+      if (sex != null) 'sex': sex,
+      if (ageBand != null) 'age_band': ageBand,
+      if (location != null) 'location': location,
+      if (count != null) 'count': count,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GalsSessionAttendanceCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sessionId,
+    Value<String>? sex,
+    Value<String>? ageBand,
+    Value<String>? location,
+    Value<int>? count,
+    Value<String>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return GalsSessionAttendanceCompanion(
+      id: id ?? this.id,
+      sessionId: sessionId ?? this.sessionId,
+      sex: sex ?? this.sex,
+      ageBand: ageBand ?? this.ageBand,
+      location: location ?? this.location,
+      count: count ?? this.count,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (sex.present) {
+      map['sex'] = Variable<String>(sex.value);
+    }
+    if (ageBand.present) {
+      map['age_band'] = Variable<String>(ageBand.value);
+    }
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
+    }
+    if (count.present) {
+      map['count'] = Variable<int>(count.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsSessionAttendanceCompanion(')
+          ..write('id: $id, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('sex: $sex, ')
+          ..write('ageBand: $ageBand, ')
+          ..write('location: $location, ')
+          ..write('count: $count, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$OticDatabase extends GeneratedDatabase {
   _$OticDatabase(QueryExecutor e) : super(e);
   $OticDatabaseManager get managers => $OticDatabaseManager(this);
@@ -23481,6 +25103,14 @@ abstract class _$OticDatabase extends GeneratedDatabase {
   late final $TeacherSubjectsTable teacherSubjects = $TeacherSubjectsTable(
     this,
   );
+  late final $GalsChampionsTable galsChampions = $GalsChampionsTable(this);
+  late final $GalsSharingSessionsTable galsSharingSessions =
+      $GalsSharingSessionsTable(this);
+  late final $GalsSessionToolsTable galsSessionTools = $GalsSessionToolsTable(
+    this,
+  );
+  late final $GalsSessionAttendanceTable galsSessionAttendance =
+      $GalsSessionAttendanceTable(this);
   late final Index idxTopicResourcesLookup = Index(
     'idx_topic_resources_lookup',
     'CREATE INDEX idx_topic_resources_lookup ON topic_resources (subject_id, topic_key)',
@@ -23641,6 +25271,10 @@ abstract class _$OticDatabase extends GeneratedDatabase {
     classTeacherAssignments,
     learnerRegistrations,
     teacherSubjects,
+    galsChampions,
+    galsSharingSessions,
+    galsSessionTools,
+    galsSessionAttendance,
     idxTopicResourcesLookup,
     idxTopicResourcesTitle,
     idxCustomSubjectsSubjectId,
@@ -35448,6 +37082,912 @@ typedef $$TeacherSubjectsTableProcessedTableManager =
       TeacherSubject,
       PrefetchHooks Function()
     >;
+typedef $$GalsChampionsTableCreateCompanionBuilder =
+    GalsChampionsCompanion Function({
+      required String id,
+      required String displayName,
+      Value<String?> sex,
+      Value<String?> ageBand,
+      Value<String?> location,
+      required String createdAt,
+      required String updatedAt,
+      Value<int> rowid,
+    });
+typedef $$GalsChampionsTableUpdateCompanionBuilder =
+    GalsChampionsCompanion Function({
+      Value<String> id,
+      Value<String> displayName,
+      Value<String?> sex,
+      Value<String?> ageBand,
+      Value<String?> location,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$GalsChampionsTableFilterComposer
+    extends Composer<_$OticDatabase, $GalsChampionsTable> {
+  $$GalsChampionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sex => $composableBuilder(
+    column: $table.sex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ageBand => $composableBuilder(
+    column: $table.ageBand,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GalsChampionsTableOrderingComposer
+    extends Composer<_$OticDatabase, $GalsChampionsTable> {
+  $$GalsChampionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sex => $composableBuilder(
+    column: $table.sex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ageBand => $composableBuilder(
+    column: $table.ageBand,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GalsChampionsTableAnnotationComposer
+    extends Composer<_$OticDatabase, $GalsChampionsTable> {
+  $$GalsChampionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sex =>
+      $composableBuilder(column: $table.sex, builder: (column) => column);
+
+  GeneratedColumn<String> get ageBand =>
+      $composableBuilder(column: $table.ageBand, builder: (column) => column);
+
+  GeneratedColumn<String> get location =>
+      $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$GalsChampionsTableTableManager
+    extends
+        RootTableManager<
+          _$OticDatabase,
+          $GalsChampionsTable,
+          GalsChampion,
+          $$GalsChampionsTableFilterComposer,
+          $$GalsChampionsTableOrderingComposer,
+          $$GalsChampionsTableAnnotationComposer,
+          $$GalsChampionsTableCreateCompanionBuilder,
+          $$GalsChampionsTableUpdateCompanionBuilder,
+          (
+            GalsChampion,
+            BaseReferences<_$OticDatabase, $GalsChampionsTable, GalsChampion>,
+          ),
+          GalsChampion,
+          PrefetchHooks Function()
+        > {
+  $$GalsChampionsTableTableManager(_$OticDatabase db, $GalsChampionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GalsChampionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GalsChampionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GalsChampionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<String?> sex = const Value.absent(),
+                Value<String?> ageBand = const Value.absent(),
+                Value<String?> location = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GalsChampionsCompanion(
+                id: id,
+                displayName: displayName,
+                sex: sex,
+                ageBand: ageBand,
+                location: location,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String displayName,
+                Value<String?> sex = const Value.absent(),
+                Value<String?> ageBand = const Value.absent(),
+                Value<String?> location = const Value.absent(),
+                required String createdAt,
+                required String updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => GalsChampionsCompanion.insert(
+                id: id,
+                displayName: displayName,
+                sex: sex,
+                ageBand: ageBand,
+                location: location,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GalsChampionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OticDatabase,
+      $GalsChampionsTable,
+      GalsChampion,
+      $$GalsChampionsTableFilterComposer,
+      $$GalsChampionsTableOrderingComposer,
+      $$GalsChampionsTableAnnotationComposer,
+      $$GalsChampionsTableCreateCompanionBuilder,
+      $$GalsChampionsTableUpdateCompanionBuilder,
+      (
+        GalsChampion,
+        BaseReferences<_$OticDatabase, $GalsChampionsTable, GalsChampion>,
+      ),
+      GalsChampion,
+      PrefetchHooks Function()
+    >;
+typedef $$GalsSharingSessionsTableCreateCompanionBuilder =
+    GalsSharingSessionsCompanion Function({
+      required String id,
+      required String championId,
+      required String occurredAt,
+      required String createdAt,
+      required String updatedAt,
+      Value<int> rowid,
+    });
+typedef $$GalsSharingSessionsTableUpdateCompanionBuilder =
+    GalsSharingSessionsCompanion Function({
+      Value<String> id,
+      Value<String> championId,
+      Value<String> occurredAt,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$GalsSharingSessionsTableFilterComposer
+    extends Composer<_$OticDatabase, $GalsSharingSessionsTable> {
+  $$GalsSharingSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GalsSharingSessionsTableOrderingComposer
+    extends Composer<_$OticDatabase, $GalsSharingSessionsTable> {
+  $$GalsSharingSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GalsSharingSessionsTableAnnotationComposer
+    extends Composer<_$OticDatabase, $GalsSharingSessionsTable> {
+  $$GalsSharingSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$GalsSharingSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$OticDatabase,
+          $GalsSharingSessionsTable,
+          GalsSharingSession,
+          $$GalsSharingSessionsTableFilterComposer,
+          $$GalsSharingSessionsTableOrderingComposer,
+          $$GalsSharingSessionsTableAnnotationComposer,
+          $$GalsSharingSessionsTableCreateCompanionBuilder,
+          $$GalsSharingSessionsTableUpdateCompanionBuilder,
+          (
+            GalsSharingSession,
+            BaseReferences<
+              _$OticDatabase,
+              $GalsSharingSessionsTable,
+              GalsSharingSession
+            >,
+          ),
+          GalsSharingSession,
+          PrefetchHooks Function()
+        > {
+  $$GalsSharingSessionsTableTableManager(
+    _$OticDatabase db,
+    $GalsSharingSessionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GalsSharingSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GalsSharingSessionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$GalsSharingSessionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> championId = const Value.absent(),
+                Value<String> occurredAt = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GalsSharingSessionsCompanion(
+                id: id,
+                championId: championId,
+                occurredAt: occurredAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String championId,
+                required String occurredAt,
+                required String createdAt,
+                required String updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => GalsSharingSessionsCompanion.insert(
+                id: id,
+                championId: championId,
+                occurredAt: occurredAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GalsSharingSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OticDatabase,
+      $GalsSharingSessionsTable,
+      GalsSharingSession,
+      $$GalsSharingSessionsTableFilterComposer,
+      $$GalsSharingSessionsTableOrderingComposer,
+      $$GalsSharingSessionsTableAnnotationComposer,
+      $$GalsSharingSessionsTableCreateCompanionBuilder,
+      $$GalsSharingSessionsTableUpdateCompanionBuilder,
+      (
+        GalsSharingSession,
+        BaseReferences<
+          _$OticDatabase,
+          $GalsSharingSessionsTable,
+          GalsSharingSession
+        >,
+      ),
+      GalsSharingSession,
+      PrefetchHooks Function()
+    >;
+typedef $$GalsSessionToolsTableCreateCompanionBuilder =
+    GalsSessionToolsCompanion Function({
+      required String sessionId,
+      required String packId,
+      required String toolId,
+      required String contentVersion,
+      Value<int> rowid,
+    });
+typedef $$GalsSessionToolsTableUpdateCompanionBuilder =
+    GalsSessionToolsCompanion Function({
+      Value<String> sessionId,
+      Value<String> packId,
+      Value<String> toolId,
+      Value<String> contentVersion,
+      Value<int> rowid,
+    });
+
+class $$GalsSessionToolsTableFilterComposer
+    extends Composer<_$OticDatabase, $GalsSessionToolsTable> {
+  $$GalsSessionToolsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get sessionId => $composableBuilder(
+    column: $table.sessionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toolId => $composableBuilder(
+    column: $table.toolId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GalsSessionToolsTableOrderingComposer
+    extends Composer<_$OticDatabase, $GalsSessionToolsTable> {
+  $$GalsSessionToolsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get sessionId => $composableBuilder(
+    column: $table.sessionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toolId => $composableBuilder(
+    column: $table.toolId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GalsSessionToolsTableAnnotationComposer
+    extends Composer<_$OticDatabase, $GalsSessionToolsTable> {
+  $$GalsSessionToolsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get sessionId =>
+      $composableBuilder(column: $table.sessionId, builder: (column) => column);
+
+  GeneratedColumn<String> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<String> get toolId =>
+      $composableBuilder(column: $table.toolId, builder: (column) => column);
+
+  GeneratedColumn<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => column,
+  );
+}
+
+class $$GalsSessionToolsTableTableManager
+    extends
+        RootTableManager<
+          _$OticDatabase,
+          $GalsSessionToolsTable,
+          GalsSessionTool,
+          $$GalsSessionToolsTableFilterComposer,
+          $$GalsSessionToolsTableOrderingComposer,
+          $$GalsSessionToolsTableAnnotationComposer,
+          $$GalsSessionToolsTableCreateCompanionBuilder,
+          $$GalsSessionToolsTableUpdateCompanionBuilder,
+          (
+            GalsSessionTool,
+            BaseReferences<
+              _$OticDatabase,
+              $GalsSessionToolsTable,
+              GalsSessionTool
+            >,
+          ),
+          GalsSessionTool,
+          PrefetchHooks Function()
+        > {
+  $$GalsSessionToolsTableTableManager(
+    _$OticDatabase db,
+    $GalsSessionToolsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GalsSessionToolsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GalsSessionToolsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GalsSessionToolsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> sessionId = const Value.absent(),
+                Value<String> packId = const Value.absent(),
+                Value<String> toolId = const Value.absent(),
+                Value<String> contentVersion = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GalsSessionToolsCompanion(
+                sessionId: sessionId,
+                packId: packId,
+                toolId: toolId,
+                contentVersion: contentVersion,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String sessionId,
+                required String packId,
+                required String toolId,
+                required String contentVersion,
+                Value<int> rowid = const Value.absent(),
+              }) => GalsSessionToolsCompanion.insert(
+                sessionId: sessionId,
+                packId: packId,
+                toolId: toolId,
+                contentVersion: contentVersion,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GalsSessionToolsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OticDatabase,
+      $GalsSessionToolsTable,
+      GalsSessionTool,
+      $$GalsSessionToolsTableFilterComposer,
+      $$GalsSessionToolsTableOrderingComposer,
+      $$GalsSessionToolsTableAnnotationComposer,
+      $$GalsSessionToolsTableCreateCompanionBuilder,
+      $$GalsSessionToolsTableUpdateCompanionBuilder,
+      (
+        GalsSessionTool,
+        BaseReferences<_$OticDatabase, $GalsSessionToolsTable, GalsSessionTool>,
+      ),
+      GalsSessionTool,
+      PrefetchHooks Function()
+    >;
+typedef $$GalsSessionAttendanceTableCreateCompanionBuilder =
+    GalsSessionAttendanceCompanion Function({
+      required String id,
+      required String sessionId,
+      required String sex,
+      required String ageBand,
+      required String location,
+      required int count,
+      required String createdAt,
+      Value<int> rowid,
+    });
+typedef $$GalsSessionAttendanceTableUpdateCompanionBuilder =
+    GalsSessionAttendanceCompanion Function({
+      Value<String> id,
+      Value<String> sessionId,
+      Value<String> sex,
+      Value<String> ageBand,
+      Value<String> location,
+      Value<int> count,
+      Value<String> createdAt,
+      Value<int> rowid,
+    });
+
+class $$GalsSessionAttendanceTableFilterComposer
+    extends Composer<_$OticDatabase, $GalsSessionAttendanceTable> {
+  $$GalsSessionAttendanceTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sessionId => $composableBuilder(
+    column: $table.sessionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sex => $composableBuilder(
+    column: $table.sex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ageBand => $composableBuilder(
+    column: $table.ageBand,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get count => $composableBuilder(
+    column: $table.count,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GalsSessionAttendanceTableOrderingComposer
+    extends Composer<_$OticDatabase, $GalsSessionAttendanceTable> {
+  $$GalsSessionAttendanceTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sessionId => $composableBuilder(
+    column: $table.sessionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sex => $composableBuilder(
+    column: $table.sex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ageBand => $composableBuilder(
+    column: $table.ageBand,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get count => $composableBuilder(
+    column: $table.count,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GalsSessionAttendanceTableAnnotationComposer
+    extends Composer<_$OticDatabase, $GalsSessionAttendanceTable> {
+  $$GalsSessionAttendanceTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sessionId =>
+      $composableBuilder(column: $table.sessionId, builder: (column) => column);
+
+  GeneratedColumn<String> get sex =>
+      $composableBuilder(column: $table.sex, builder: (column) => column);
+
+  GeneratedColumn<String> get ageBand =>
+      $composableBuilder(column: $table.ageBand, builder: (column) => column);
+
+  GeneratedColumn<String> get location =>
+      $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<int> get count =>
+      $composableBuilder(column: $table.count, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$GalsSessionAttendanceTableTableManager
+    extends
+        RootTableManager<
+          _$OticDatabase,
+          $GalsSessionAttendanceTable,
+          GalsSessionAttendanceData,
+          $$GalsSessionAttendanceTableFilterComposer,
+          $$GalsSessionAttendanceTableOrderingComposer,
+          $$GalsSessionAttendanceTableAnnotationComposer,
+          $$GalsSessionAttendanceTableCreateCompanionBuilder,
+          $$GalsSessionAttendanceTableUpdateCompanionBuilder,
+          (
+            GalsSessionAttendanceData,
+            BaseReferences<
+              _$OticDatabase,
+              $GalsSessionAttendanceTable,
+              GalsSessionAttendanceData
+            >,
+          ),
+          GalsSessionAttendanceData,
+          PrefetchHooks Function()
+        > {
+  $$GalsSessionAttendanceTableTableManager(
+    _$OticDatabase db,
+    $GalsSessionAttendanceTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GalsSessionAttendanceTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$GalsSessionAttendanceTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$GalsSessionAttendanceTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> sessionId = const Value.absent(),
+                Value<String> sex = const Value.absent(),
+                Value<String> ageBand = const Value.absent(),
+                Value<String> location = const Value.absent(),
+                Value<int> count = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GalsSessionAttendanceCompanion(
+                id: id,
+                sessionId: sessionId,
+                sex: sex,
+                ageBand: ageBand,
+                location: location,
+                count: count,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String sessionId,
+                required String sex,
+                required String ageBand,
+                required String location,
+                required int count,
+                required String createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => GalsSessionAttendanceCompanion.insert(
+                id: id,
+                sessionId: sessionId,
+                sex: sex,
+                ageBand: ageBand,
+                location: location,
+                count: count,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GalsSessionAttendanceTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OticDatabase,
+      $GalsSessionAttendanceTable,
+      GalsSessionAttendanceData,
+      $$GalsSessionAttendanceTableFilterComposer,
+      $$GalsSessionAttendanceTableOrderingComposer,
+      $$GalsSessionAttendanceTableAnnotationComposer,
+      $$GalsSessionAttendanceTableCreateCompanionBuilder,
+      $$GalsSessionAttendanceTableUpdateCompanionBuilder,
+      (
+        GalsSessionAttendanceData,
+        BaseReferences<
+          _$OticDatabase,
+          $GalsSessionAttendanceTable,
+          GalsSessionAttendanceData
+        >,
+      ),
+      GalsSessionAttendanceData,
+      PrefetchHooks Function()
+    >;
 
 class $OticDatabaseManager {
   final _$OticDatabase _db;
@@ -35548,4 +38088,12 @@ class $OticDatabaseManager {
       $$LearnerRegistrationsTableTableManager(_db, _db.learnerRegistrations);
   $$TeacherSubjectsTableTableManager get teacherSubjects =>
       $$TeacherSubjectsTableTableManager(_db, _db.teacherSubjects);
+  $$GalsChampionsTableTableManager get galsChampions =>
+      $$GalsChampionsTableTableManager(_db, _db.galsChampions);
+  $$GalsSharingSessionsTableTableManager get galsSharingSessions =>
+      $$GalsSharingSessionsTableTableManager(_db, _db.galsSharingSessions);
+  $$GalsSessionToolsTableTableManager get galsSessionTools =>
+      $$GalsSessionToolsTableTableManager(_db, _db.galsSessionTools);
+  $$GalsSessionAttendanceTableTableManager get galsSessionAttendance =>
+      $$GalsSessionAttendanceTableTableManager(_db, _db.galsSessionAttendance);
 }

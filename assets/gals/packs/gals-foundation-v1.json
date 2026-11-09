@@ -1,0 +1,70 @@
+{
+  "packId": "gals-foundation",
+  "schemaVersion": 1,
+  "contentVersion": "1.0.0-draft.1",
+  "status": "draft",
+  "defaultLanguage": "en",
+  "sources": [
+    {
+      "name": "Step by Step Guide to GALS Integration in Humanitarian and Development Programmes",
+      "publisher": "Oxfam Uganda",
+      "url": "https://oi-files-cng-v2-prod.s3.eu-west-2.amazonaws.com/uganda.oxfam.org/s3fs-public/file_attachments/Step%20by%20Step%20Guide%20to%20GALS%20integration%20in%20humanitarian%20and%20development%20programmes.pdf",
+      "reference": "2022 guide; bibliographic credit only"
+    },
+    {
+      "name": "Growing Together from Seedlings to a Forest",
+      "publisher": "CEFORD / Oxfam Uganda",
+      "url": "https://oi-files-cng-v2-prod.s3.eu-west-2.amazonaws.com/uganda.oxfam.org/s3fs-public/file_attachments/Growing%20Together%20from%20Seedlings%20to%20a%20Forest.pdf",
+      "reference": "Youth facilitators' guide, 2022; bibliographic credit only"
+    }
+  ],
+  "languages": {
+    "en": {"status": "draft"}
+  },
+  "lessons": [
+    {
+      "id": "getting-started",
+      "title": {"en": "Starting a participant-led GALS session"},
+      "body": {"en": "Invite people to describe a future they want to work towards. Give them time to draw their own ideas on paper and decide what they wish to share. Ask questions rather than drawing or deciding for anyone."},
+      "quiz": [
+        {
+          "id": "who-draws",
+          "question": {"en": "Who decides what goes into a participant's drawing?"},
+          "choices": {"en": ["The participant", "The app", "The facilitator"]},
+          "correct": 0,
+          "explanation": {"en": "The participant owns the drawing and decides what to share."}
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "vision-road-journey",
+      "title": {"en": "Vision road journey"},
+      "steps": [
+        {
+          "id": "draw-future",
+          "instruction": {"en": "On paper, draw a future you would like to move towards. Choose symbols that make sense to you; the drawing does not need to look perfect. You decide what to explain to the group."},
+          "audio": {}
+        },
+        {
+          "id": "choose-first-action",
+          "instruction": {"en": "Look at your drawing and choose one small action you could take soon. Mark it on your paper. If you want, tell a partner why you chose it."},
+          "audio": {}
+        }
+      ]
+    }
+  ],
+  "sessionPlans": [
+    {
+      "id": "intro-vision-session",
+      "title": {"en": "Introduction to visioning (draft outline)"},
+      "objective": {"en": "Each participant starts a drawing on paper and identifies a first action."},
+      "activities": [
+        {"id": "welcome", "minutes": 10, "instruction": {"en": "Welcome people and agree that everyone chooses what to share."}},
+        {"id": "paper-vision", "minutes": 30, "toolId": "vision-road-journey", "stepId": "draw-future", "instruction": {"en": "Offer paper and invite individual drawing time."}}
+      ],
+      "homework": {"en": "Keep the drawing somewhere safe and revisit the chosen action."}
+    }
+  ]
+}

@@ -123,6 +123,7 @@ flutter:
     - assets/branding/      # official brand logo
     - assets/illustrations/ # home screen hero art
     - assets/curriculum/    # bundled curriculum content for all subjects
+    - assets/gals/packs/    # original draft GALS content pack; no audio bundled
     - assets/curriculum/diagrams/  # subject-linked teaching diagrams (pilot: biology)
     - assets/curriculum/diagrams/biology/  # Flutter does not include subfolders on its own
     - assets/curriculum/diagrams/mathematics/

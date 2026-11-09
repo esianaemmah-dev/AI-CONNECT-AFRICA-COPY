@@ -13,6 +13,7 @@ import '../../features/admin/admin_screen.dart';
 import '../../features/admin/admin_service.dart';
 import '../../features/assignments/assignments_screens.dart';
 import '../../features/notes/my_notes_screen.dart';
+import '../../features/gals/gals_screen.dart';
 import '../../features/notes/note_pdf_screen.dart';
 import '../../features/teacher/register_learners_screen.dart';
 import '../../features/teachers/cloud_screen.dart';
@@ -158,6 +159,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/teacher/materials',
             builder: (_, __) => const LessonMaterialsScreen(),
           ),
+          GoRoute(path: '/teacher/gals', builder: (_, __) => const GalsScreen()),
           GoRoute(
             path: '/teacher/sync',
             builder: (_, __) => const TeacherSyncScreen(),
