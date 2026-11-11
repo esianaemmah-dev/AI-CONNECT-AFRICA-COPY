@@ -2,8 +2,9 @@
 
 This is a fictional-data pilot for facilitator and champion preparation, not an
 approved curriculum or a production participant register. Existing work on
-`feature/gals-vision-road-journey` was extended; unrelated local changes were
-preserved. Nothing was pushed, merged or deployed.
+`feature/gals-vision-road-journey` was extended. The validated changes were
+merged into `main` and pushed to GitHub on 11 November 2026; no deployment is
+implied.
 
 ## Entry point and reuse
 
