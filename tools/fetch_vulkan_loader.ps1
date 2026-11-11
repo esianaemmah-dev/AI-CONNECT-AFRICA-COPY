@@ -57,21 +57,37 @@ try {
   # where vulkan-runtime-components.zip is not available yet (HTTP 404). If the
   # error names that version, fall back to the previous patch version.
   $message = $_.Exception.Message
-  $latestVersion = [regex]::Match($message, 'for windows (?<ver>\d+\.\d+\.\d+\.\d+)').Groups['ver'].Value
+  $latestVersion = [regex]::Match(
+    $message,
+    'for windows (?<ver>\d+\.\d+\.\d+\.\d+)',
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  ).Groups['ver'].Value
 
   if (-not [string]::IsNullOrWhiteSpace($latestVersion)) {
     $parts = $latestVersion.Split('.') | ForEach-Object { [int]$_ }
-    $patch = $parts[3]
-    for ($candidatePatch = $patch - 1; $candidatePatch -ge 0 -and -not $downloaded; $candidatePatch--) {
-      $candidateVersion = "$($parts[0]).$($parts[1]).$($parts[2]).$candidatePatch"
-      $candidateUrl = "https://sdk.lunarg.com/sdk/download/$candidateVersion/windows/vulkan-runtime-components.zip"
-      Write-Warning "Latest components missing for $latestVersion; trying $candidateVersion ..."
+    $baseVersion = "$($parts[0]).$($parts[1])"
+    $latestBuild = $parts[2]
+    $latestPatch = $parts[3]
+    $oldestBuild = [Math]::Max($latestBuild - 10, 0)
 
-      try {
-        Invoke-WebRequest -Uri $candidateUrl -OutFile $zip -UseBasicParsing
-        $downloaded = $true
-      } catch {
-        continue
+    for ($candidateBuild = $latestBuild; $candidateBuild -ge $oldestBuild -and -not $downloaded; $candidateBuild--) {
+      $patchStart = if ($candidateBuild -eq $latestBuild) {
+        [Math]::Max($latestPatch - 1, 0)
+      } else {
+        9
+      }
+
+      for ($candidatePatch = $patchStart; $candidatePatch -ge 0 -and -not $downloaded; $candidatePatch--) {
+        $candidateVersion = "$baseVersion.$candidateBuild.$candidatePatch"
+        $candidateUrl = "https://sdk.lunarg.com/sdk/download/$candidateVersion/windows/vulkan-runtime-components.zip"
+        Write-Warning "Latest components missing for $latestVersion; trying $candidateVersion ..."
+
+        try {
+          Invoke-WebRequest -Uri $candidateUrl -OutFile $zip -UseBasicParsing
+          $downloaded = $true
+        } catch {
+          continue
+        }
       }
     }
   }
