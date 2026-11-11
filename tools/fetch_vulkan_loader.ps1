@@ -42,9 +42,37 @@ if (Test-Path $dll) {
 
 New-Item -ItemType Directory -Force -Path $destDir | Out-Null
 
-$url = 'https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip'
-$zip = Join-Path $env:TEMP 'vulkan-runtime-components.zip'
-$extract = Join-Path $env:TEMP 'vulkan-runtime-components'
+$catalogUrl = 'https://vulkan.lunarg.com/sdk/files.json'
+$catalogResponse = Invoke-WebRequest -Uri $catalogUrl -UseBasicParsing
+$catalog = $catalogResponse.Content | ConvertFrom-Json -AsHashtable
+
+if (-not $catalog.ContainsKey('windows')) {
+  throw "LunarG did not return a Windows SDK file catalog"
+}
+
+$runtimePackage = $null
+$runtimeVersion = $null
+foreach ($version in ($catalog.windows.Keys | Sort-Object { [version]$_ } -Descending)) {
+  $runtimePackage = $catalog.windows[$version].files |
+    Where-Object {
+      $_.name -eq 'Runtime zip' -and
+      $_.uploaded -eq $true -and
+      $_.file_name -match '^VulkanRT-X64-.+-Components\.zip$'
+    } |
+    Select-Object -First 1
+  if ($runtimePackage) {
+    $runtimeVersion = $version
+    break
+  }
+}
+
+if (-not $runtimePackage) {
+  throw "No published x64 Vulkan Runtime Components ZIP was found in the LunarG catalog"
+}
+
+$zip = Join-Path $env:TEMP $runtimePackage.file_name
+$extract = Join-Path $env:TEMP "vulkan-runtime-components-$runtimeVersion"
+$url = "https://sdk.lunarg.com/sdk/download/$runtimeVersion/windows/$($runtimePackage.file_name)"
 
 Write-Host "Downloading $url ..."
 $downloaded = $false
@@ -97,6 +125,11 @@ try {
   }
 }
 
+$actualHash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash
+if ($actualHash -ne $runtimePackage.sha) {
+  throw "SHA-256 mismatch for $($runtimePackage.file_name): expected $($runtimePackage.sha), got $actualHash"
+}
+
 if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
 Expand-Archive -Path $zip -DestinationPath $extract -Force
 
@@ -127,4 +160,4 @@ not use the GPU for inference.
 
 $size = (Get-Item $dll).Length
 $version = $found.VersionInfo.FileVersion
-Write-Host "Fetched vulkan-1.dll ($size bytes, version $version) -> $dll" -ForegroundColor Green
+Write-Host "Fetched vulkan-1.dll ($size bytes, file version $version; runtime $runtimeVersion) -> $dll" -ForegroundColor Green
