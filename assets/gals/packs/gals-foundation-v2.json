@@ -1,0 +1,68 @@
+{
+  "packId": "gals-foundation",
+  "schemaVersion": 1,
+  "contentVersion": "1.0.0-draft.2",
+  "status": "draft",
+  "defaultLanguage": "en",
+  "sources": [
+    {
+      "name": "AI Connect Africa — original draft learning activity",
+      "url": "local:original-draft",
+      "reference": "Fictional examples written for this prototype. Not an approved GALS manual or a certification."
+    }
+  ],
+  "languages": {"en": {"status": "draft"}},
+  "lessons": [
+    {
+      "id": "vision-road-journey-lesson",
+      "toolId": "vision-road-journey",
+      "sessionPlanId": "vision-peer-session",
+      "title": {"en": "Vision Road Journey"},
+      "body": {"en": "LEARN · A road towards a chosen future\nA vision road drawing connects a future you want with your starting point and small actions along the way. Use paper and symbols of your own choosing. You own your drawing and can keep any part private.\n\nCLARIFY · Your road, your choices\nA champion is a peer who practises the activity and invites others to try it. They ask and listen; they do not decide another person's goals. Completing this draft activity is practice, not a qualification.\n\nPRACTICE · A fictional example\nNeri Example imagines a flourishing household garden. Today there is a small empty patch and little time to tend it. Neri draws a seed for the starting point and a basket of vegetables for the vision. A neighbour who can lend a watering can is a support; dry weather is an obstacle. These people and circumstances are fictional.\n\nAPPLY · Make the next step manageable\nNeri chooses to ask household members how they would like to share the work, rather than assigning tasks to them. The first milestone is a jointly agreed planting day in two weeks. If water is scarce, the group can change the plan. Progress is something to discuss, not a promise to enforce.\n\nCREATE · Draw your own practice road\nUse the steps below to draw a fictional practice vision, the present situation, supports, obstacles and milestones. Mark one action you could try this week and a date to look again. Keep the paper yourself; this app does not collect drawings.\n\nREFLECT · Prepare to share\nWhat might need to change? How will you make space for each peer's own choices? Write one short practice reflection below. Then choose or create a fictional champion, save this lesson, and use the peer-session outline."},
+      "quiz": [
+        {
+          "id": "ownership",
+          "question": {"en": "Who chooses the goal and what to share?"},
+          "choices": {"en": ["The participant", "The champion for everyone", "The app"]},
+          "correct": 0,
+          "explanation": {"en": "Each participant chooses their own goal, symbols and what they want to share."}
+        },
+        {
+          "id": "first-action",
+          "question": {"en": "Which action makes Neri's road easier to review?"},
+          "choices": {"en": ["Promise that nothing will go wrong", "Agree a small planting step and a review date", "Copy someone else's goal"]},
+          "correct": 1,
+          "explanation": {"en": "A small agreed step and a review date help people notice progress and adapt the road."}
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "id": "vision-road-journey",
+      "title": {"en": "Vision Road Journey"},
+      "steps": [
+        {"id": "vision", "instruction": {"en": "Draw a future you choose at one end of your paper. Use your own symbols. For this prototype, use a fictional practice example."}, "audio": {}},
+        {"id": "starting-point", "instruction": {"en": "Draw the situation today at the other end. Join today and the vision with a road, leaving room for milestones."}, "audio": {}},
+        {"id": "supports-obstacles", "instruction": {"en": "Beside the road, draw things that could help and things that could get in the way. Ask whose ideas or work might be missing; do not assign anyone a role without discussion."}, "audio": {}},
+        {"id": "milestones", "instruction": {"en": "Mark two small milestones on the road. Choose a first action for this week and a date to review it. You can change the plan."}, "audio": {}},
+        {"id": "reflect-share", "instruction": {"en": "Reflect on what could change. If you wish, explain one part to a peer, listen to their questions and invite them to draw their own road."}, "audio": {}}
+      ]
+    }
+  ],
+  "sessionPlans": [
+    {
+      "id": "vision-peer-session",
+      "title": {"en": "Peer-sharing practice session"},
+      "objective": {"en": "Each peer creates their own practice road and chooses a first action. Use fictional aliases and places for this draft."},
+      "activities": [
+        {"id": "welcome", "minutes": 5, "instruction": {"en": "Invite peers, offer paper and agree that passing or keeping a drawing private is welcome."}},
+        {"id": "demonstrate", "minutes": 5, "instruction": {"en": "Explain the fictional garden example. Ask what belongs to the participant rather than to the champion."}},
+        {"id": "draw", "minutes": 15, "toolId": "vision-road-journey", "stepId": "vision", "instruction": {"en": "Invite peers to work through all five road steps on their own paper. Listen and ask open questions."}},
+        {"id": "share", "minutes": 10, "instruction": {"en": "Offer pairs time to share a chosen part, then identify one small action and a review date. Do not copy private drawing details into the app."}},
+        {"id": "close", "minutes": 5, "instruction": {"en": "Ask what was useful and what they would change. Record only aggregate attendance for this practice session."}}
+      ],
+      "homework": {"en": "Keep the paper and revisit the chosen action on the review date. A later session is another attendance event, not evidence of a new unique person reached."}
+    }
+  ]
+}

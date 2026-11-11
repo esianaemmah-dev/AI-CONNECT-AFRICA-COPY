@@ -11,16 +11,51 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'bundled draft tool is English, credited and contains no audio',
+    'bundled five-tool draft is English, credited and contains no audio',
     () async {
       final pack = await GalsPack.load();
       expect(pack.id, 'gals-foundation');
       expect(pack.status, 'draft');
+      expect(pack.version, '1.0.0-draft.3');
+      expect(pack.tools, hasLength(5));
+      expect(pack.sessionPlans, hasLength(5));
       expect(pack.tool('vision-road-journey')!.steps, isNotEmpty);
       expect(
         pack.tool('vision-road-journey')!.steps.every((s) => !s.hasAudio),
         isTrue,
       );
+    },
+  );
+
+  test(
+    'optional achievement reflection is local, version-pinned and reopens',
+    () async {
+      final db = OticDatabase.forTesting(
+        DatabaseConnection(NativeDatabase.memory()),
+      );
+      try {
+        final store = GalsFieldStore(db);
+        final pack = await GalsPack.load();
+        final champion = await store.addChampion(
+          'Neri Example',
+          groupName: 'Fictional group',
+        );
+        await store.recordAchievementReview(
+          championId: champion,
+          pack: pack,
+          toolId: 'achievement-road-journey',
+          reviewedAt: DateTime.utc(2026, 11, 4),
+          progress: 'A fictional small step.',
+          nextSteps: 'Review it next week.',
+        );
+        final reviews = await store.achievementReviewsFor(champion);
+        expect(reviews, hasLength(1));
+        expect(reviews.single.contentVersion, pack.version);
+        expect(reviews.single.progress, contains('fictional'));
+        expect(await db.select(db.cloudOutbox).get(), isEmpty);
+      } finally {
+        await db.close();
+      }
     },
   );
 
@@ -36,7 +71,18 @@ void main() {
       try {
         final store = GalsFieldStore(db);
         final championId = await store.addChampion('Amina Test'); // fictional
+        await store.completeLesson(
+          championId: championId,
+          pack: pack,
+          lessonId: 'vision-road-journey-lesson',
+          answers: {
+            for (final q in pack.lesson('vision-road-journey-lesson')!.quiz)
+              q.id: q.correct,
+          },
+          reflection: 'Ask peers to choose their own symbols.',
+        );
         final sessionId = await store.recordSharing(
+          lessonId: 'vision-road-journey-lesson',
           championId: championId,
           pack: pack,
           toolId: 'vision-road-journey',
@@ -50,6 +96,14 @@ void main() {
         db = OticDatabase.forTesting(DatabaseConnection(NativeDatabase(file)));
         final reopened = GalsFieldStore(db);
         expect((await reopened.champions()).single.id, championId);
+        expect(
+          (await reopened.completion(
+            championId: championId,
+            pack: pack,
+            lessonId: 'vision-road-journey-lesson',
+          ))!.reflection,
+          contains('symbols'),
+        );
         final events = await reopened.sharingFor(championId);
         expect(events, hasLength(1));
         expect(events.single.session.id, sessionId);
@@ -79,6 +133,7 @@ void main() {
         final champion = await store.addChampion('Kato Example'); // fictional
         Future<void> save(String who, String tool, int count) => store
             .recordSharing(
+              lessonId: 'vision-road-journey-lesson',
               championId: who,
               pack: pack,
               toolId: tool,

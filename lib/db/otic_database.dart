@@ -109,6 +109,8 @@ part 'otic_database.g.dart';
     GalsSharingSessions,
     GalsSessionTools,
     GalsSessionAttendance,
+    GalsLessonCompletions,
+    GalsAchievementReviews,
   ],
   daos: [
     StudentDao,
@@ -141,7 +143,7 @@ class OticDatabase extends _$OticDatabase {
   OticDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 39;
+  int get schemaVersion => 41;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -796,6 +798,25 @@ class OticDatabase extends _$OticDatabase {
           ('gals_session_attendance', () => m.createTable(galsSessionAttendance)),
         ]) {
           if (!await _tableExists(name)) await create();
+        }
+      }
+      if (from < 40) {
+        if (!await _tableExists('gals_lesson_completions')) {
+          await m.createTable(galsLessonCompletions);
+        }
+        if (!await _columnExists('gals_sharing_sessions', 'lesson_id')) {
+          await m.addColumn(galsSharingSessions, galsSharingSessions.lessonId);
+        }
+      }
+      if (from < 41) {
+        if (!await _tableExists('gals_achievement_reviews')) {
+          await m.createTable(galsAchievementReviews);
+        }
+        for (final (column, add) in [
+          ('group_name', () => m.addColumn(galsChampions, galsChampions.groupName)),
+          ('training_at', () => m.addColumn(galsChampions, galsChampions.trainingAt)),
+        ]) {
+          if (!await _columnExists('gals_champions', column)) await add();
         }
       }
     },

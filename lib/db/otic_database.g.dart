@@ -23429,6 +23429,17 @@ class $GalsChampionsTable extends GalsChampions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _groupNameMeta = const VerificationMeta(
+    'groupName',
+  );
+  @override
+  late final GeneratedColumn<String> groupName = GeneratedColumn<String>(
+    'group_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sexMeta = const VerificationMeta('sex');
   @override
   late final GeneratedColumn<String> sex = GeneratedColumn<String>(
@@ -23460,6 +23471,17 @@ class $GalsChampionsTable extends GalsChampions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _trainingAtMeta = const VerificationMeta(
+    'trainingAt',
+  );
+  @override
+  late final GeneratedColumn<String> trainingAt = GeneratedColumn<String>(
+    'training_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -23486,9 +23508,11 @@ class $GalsChampionsTable extends GalsChampions
   List<GeneratedColumn> get $columns => [
     id,
     displayName,
+    groupName,
     sex,
     ageBand,
     location,
+    trainingAt,
     createdAt,
     updatedAt,
   ];
@@ -23520,6 +23544,12 @@ class $GalsChampionsTable extends GalsChampions
     } else if (isInserting) {
       context.missing(_displayNameMeta);
     }
+    if (data.containsKey('group_name')) {
+      context.handle(
+        _groupNameMeta,
+        groupName.isAcceptableOrUnknown(data['group_name']!, _groupNameMeta),
+      );
+    }
     if (data.containsKey('sex')) {
       context.handle(
         _sexMeta,
@@ -23536,6 +23566,12 @@ class $GalsChampionsTable extends GalsChampions
       context.handle(
         _locationMeta,
         location.isAcceptableOrUnknown(data['location']!, _locationMeta),
+      );
+    }
+    if (data.containsKey('training_at')) {
+      context.handle(
+        _trainingAtMeta,
+        trainingAt.isAcceptableOrUnknown(data['training_at']!, _trainingAtMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -23571,6 +23607,10 @@ class $GalsChampionsTable extends GalsChampions
         DriftSqlType.string,
         data['${effectivePrefix}display_name'],
       )!,
+      groupName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_name'],
+      ),
       sex: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sex'],
@@ -23582,6 +23622,10 @@ class $GalsChampionsTable extends GalsChampions
       location: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}location'],
+      ),
+      trainingAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}training_at'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -23603,17 +23647,21 @@ class $GalsChampionsTable extends GalsChampions
 class GalsChampion extends DataClass implements Insertable<GalsChampion> {
   final String id;
   final String displayName;
+  final String? groupName;
   final String? sex;
   final String? ageBand;
   final String? location;
+  final String? trainingAt;
   final String createdAt;
   final String updatedAt;
   const GalsChampion({
     required this.id,
     required this.displayName,
+    this.groupName,
     this.sex,
     this.ageBand,
     this.location,
+    this.trainingAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23622,6 +23670,9 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['display_name'] = Variable<String>(displayName);
+    if (!nullToAbsent || groupName != null) {
+      map['group_name'] = Variable<String>(groupName);
+    }
     if (!nullToAbsent || sex != null) {
       map['sex'] = Variable<String>(sex);
     }
@@ -23630,6 +23681,9 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
     }
     if (!nullToAbsent || location != null) {
       map['location'] = Variable<String>(location);
+    }
+    if (!nullToAbsent || trainingAt != null) {
+      map['training_at'] = Variable<String>(trainingAt);
     }
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
@@ -23640,6 +23694,9 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
     return GalsChampionsCompanion(
       id: Value(id),
       displayName: Value(displayName),
+      groupName: groupName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(groupName),
       sex: sex == null && nullToAbsent ? const Value.absent() : Value(sex),
       ageBand: ageBand == null && nullToAbsent
           ? const Value.absent()
@@ -23647,6 +23704,9 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
       location: location == null && nullToAbsent
           ? const Value.absent()
           : Value(location),
+      trainingAt: trainingAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(trainingAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -23660,9 +23720,11 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
     return GalsChampion(
       id: serializer.fromJson<String>(json['id']),
       displayName: serializer.fromJson<String>(json['displayName']),
+      groupName: serializer.fromJson<String?>(json['groupName']),
       sex: serializer.fromJson<String?>(json['sex']),
       ageBand: serializer.fromJson<String?>(json['ageBand']),
       location: serializer.fromJson<String?>(json['location']),
+      trainingAt: serializer.fromJson<String?>(json['trainingAt']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
     );
@@ -23673,9 +23735,11 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'displayName': serializer.toJson<String>(displayName),
+      'groupName': serializer.toJson<String?>(groupName),
       'sex': serializer.toJson<String?>(sex),
       'ageBand': serializer.toJson<String?>(ageBand),
       'location': serializer.toJson<String?>(location),
+      'trainingAt': serializer.toJson<String?>(trainingAt),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
     };
@@ -23684,17 +23748,21 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
   GalsChampion copyWith({
     String? id,
     String? displayName,
+    Value<String?> groupName = const Value.absent(),
     Value<String?> sex = const Value.absent(),
     Value<String?> ageBand = const Value.absent(),
     Value<String?> location = const Value.absent(),
+    Value<String?> trainingAt = const Value.absent(),
     String? createdAt,
     String? updatedAt,
   }) => GalsChampion(
     id: id ?? this.id,
     displayName: displayName ?? this.displayName,
+    groupName: groupName.present ? groupName.value : this.groupName,
     sex: sex.present ? sex.value : this.sex,
     ageBand: ageBand.present ? ageBand.value : this.ageBand,
     location: location.present ? location.value : this.location,
+    trainingAt: trainingAt.present ? trainingAt.value : this.trainingAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -23704,9 +23772,13 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
       displayName: data.displayName.present
           ? data.displayName.value
           : this.displayName,
+      groupName: data.groupName.present ? data.groupName.value : this.groupName,
       sex: data.sex.present ? data.sex.value : this.sex,
       ageBand: data.ageBand.present ? data.ageBand.value : this.ageBand,
       location: data.location.present ? data.location.value : this.location,
+      trainingAt: data.trainingAt.present
+          ? data.trainingAt.value
+          : this.trainingAt,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -23717,9 +23789,11 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
     return (StringBuffer('GalsChampion(')
           ..write('id: $id, ')
           ..write('displayName: $displayName, ')
+          ..write('groupName: $groupName, ')
           ..write('sex: $sex, ')
           ..write('ageBand: $ageBand, ')
           ..write('location: $location, ')
+          ..write('trainingAt: $trainingAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -23730,9 +23804,11 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
   int get hashCode => Object.hash(
     id,
     displayName,
+    groupName,
     sex,
     ageBand,
     location,
+    trainingAt,
     createdAt,
     updatedAt,
   );
@@ -23742,9 +23818,11 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
       (other is GalsChampion &&
           other.id == this.id &&
           other.displayName == this.displayName &&
+          other.groupName == this.groupName &&
           other.sex == this.sex &&
           other.ageBand == this.ageBand &&
           other.location == this.location &&
+          other.trainingAt == this.trainingAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -23752,18 +23830,22 @@ class GalsChampion extends DataClass implements Insertable<GalsChampion> {
 class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
   final Value<String> id;
   final Value<String> displayName;
+  final Value<String?> groupName;
   final Value<String?> sex;
   final Value<String?> ageBand;
   final Value<String?> location;
+  final Value<String?> trainingAt;
   final Value<String> createdAt;
   final Value<String> updatedAt;
   final Value<int> rowid;
   const GalsChampionsCompanion({
     this.id = const Value.absent(),
     this.displayName = const Value.absent(),
+    this.groupName = const Value.absent(),
     this.sex = const Value.absent(),
     this.ageBand = const Value.absent(),
     this.location = const Value.absent(),
+    this.trainingAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -23771,9 +23853,11 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
   GalsChampionsCompanion.insert({
     required String id,
     required String displayName,
+    this.groupName = const Value.absent(),
     this.sex = const Value.absent(),
     this.ageBand = const Value.absent(),
     this.location = const Value.absent(),
+    this.trainingAt = const Value.absent(),
     required String createdAt,
     required String updatedAt,
     this.rowid = const Value.absent(),
@@ -23784,9 +23868,11 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
   static Insertable<GalsChampion> custom({
     Expression<String>? id,
     Expression<String>? displayName,
+    Expression<String>? groupName,
     Expression<String>? sex,
     Expression<String>? ageBand,
     Expression<String>? location,
+    Expression<String>? trainingAt,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
     Expression<int>? rowid,
@@ -23794,9 +23880,11 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (displayName != null) 'display_name': displayName,
+      if (groupName != null) 'group_name': groupName,
       if (sex != null) 'sex': sex,
       if (ageBand != null) 'age_band': ageBand,
       if (location != null) 'location': location,
+      if (trainingAt != null) 'training_at': trainingAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -23806,9 +23894,11 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
   GalsChampionsCompanion copyWith({
     Value<String>? id,
     Value<String>? displayName,
+    Value<String?>? groupName,
     Value<String?>? sex,
     Value<String?>? ageBand,
     Value<String?>? location,
+    Value<String?>? trainingAt,
     Value<String>? createdAt,
     Value<String>? updatedAt,
     Value<int>? rowid,
@@ -23816,9 +23906,11 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
     return GalsChampionsCompanion(
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
+      groupName: groupName ?? this.groupName,
       sex: sex ?? this.sex,
       ageBand: ageBand ?? this.ageBand,
       location: location ?? this.location,
+      trainingAt: trainingAt ?? this.trainingAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -23834,6 +23926,9 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
     if (displayName.present) {
       map['display_name'] = Variable<String>(displayName.value);
     }
+    if (groupName.present) {
+      map['group_name'] = Variable<String>(groupName.value);
+    }
     if (sex.present) {
       map['sex'] = Variable<String>(sex.value);
     }
@@ -23842,6 +23937,9 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
     }
     if (location.present) {
       map['location'] = Variable<String>(location.value);
+    }
+    if (trainingAt.present) {
+      map['training_at'] = Variable<String>(trainingAt.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
@@ -23860,9 +23958,11 @@ class GalsChampionsCompanion extends UpdateCompanion<GalsChampion> {
     return (StringBuffer('GalsChampionsCompanion(')
           ..write('id: $id, ')
           ..write('displayName: $displayName, ')
+          ..write('groupName: $groupName, ')
           ..write('sex: $sex, ')
           ..write('ageBand: $ageBand, ')
           ..write('location: $location, ')
+          ..write('trainingAt: $trainingAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -23896,6 +23996,17 @@ class $GalsSharingSessionsTable extends GalsSharingSessions
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lessonIdMeta = const VerificationMeta(
+    'lessonId',
+  );
+  @override
+  late final GeneratedColumn<String> lessonId = GeneratedColumn<String>(
+    'lesson_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _occurredAtMeta = const VerificationMeta(
     'occurredAt',
@@ -23934,6 +24045,7 @@ class $GalsSharingSessionsTable extends GalsSharingSessions
   List<GeneratedColumn> get $columns => [
     id,
     championId,
+    lessonId,
     occurredAt,
     createdAt,
     updatedAt,
@@ -23962,6 +24074,12 @@ class $GalsSharingSessionsTable extends GalsSharingSessions
       );
     } else if (isInserting) {
       context.missing(_championIdMeta);
+    }
+    if (data.containsKey('lesson_id')) {
+      context.handle(
+        _lessonIdMeta,
+        lessonId.isAcceptableOrUnknown(data['lesson_id']!, _lessonIdMeta),
+      );
     }
     if (data.containsKey('occurred_at')) {
       context.handle(
@@ -24004,6 +24122,10 @@ class $GalsSharingSessionsTable extends GalsSharingSessions
         DriftSqlType.string,
         data['${effectivePrefix}champion_id'],
       )!,
+      lessonId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lesson_id'],
+      ),
       occurredAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}occurred_at'],
@@ -24029,12 +24151,14 @@ class GalsSharingSession extends DataClass
     implements Insertable<GalsSharingSession> {
   final String id;
   final String championId;
+  final String? lessonId;
   final String occurredAt;
   final String createdAt;
   final String updatedAt;
   const GalsSharingSession({
     required this.id,
     required this.championId,
+    this.lessonId,
     required this.occurredAt,
     required this.createdAt,
     required this.updatedAt,
@@ -24044,6 +24168,9 @@ class GalsSharingSession extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['champion_id'] = Variable<String>(championId);
+    if (!nullToAbsent || lessonId != null) {
+      map['lesson_id'] = Variable<String>(lessonId);
+    }
     map['occurred_at'] = Variable<String>(occurredAt);
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
@@ -24054,6 +24181,9 @@ class GalsSharingSession extends DataClass
     return GalsSharingSessionsCompanion(
       id: Value(id),
       championId: Value(championId),
+      lessonId: lessonId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lessonId),
       occurredAt: Value(occurredAt),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -24068,6 +24198,7 @@ class GalsSharingSession extends DataClass
     return GalsSharingSession(
       id: serializer.fromJson<String>(json['id']),
       championId: serializer.fromJson<String>(json['championId']),
+      lessonId: serializer.fromJson<String?>(json['lessonId']),
       occurredAt: serializer.fromJson<String>(json['occurredAt']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
@@ -24079,6 +24210,7 @@ class GalsSharingSession extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'championId': serializer.toJson<String>(championId),
+      'lessonId': serializer.toJson<String?>(lessonId),
       'occurredAt': serializer.toJson<String>(occurredAt),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
@@ -24088,12 +24220,14 @@ class GalsSharingSession extends DataClass
   GalsSharingSession copyWith({
     String? id,
     String? championId,
+    Value<String?> lessonId = const Value.absent(),
     String? occurredAt,
     String? createdAt,
     String? updatedAt,
   }) => GalsSharingSession(
     id: id ?? this.id,
     championId: championId ?? this.championId,
+    lessonId: lessonId.present ? lessonId.value : this.lessonId,
     occurredAt: occurredAt ?? this.occurredAt,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -24104,6 +24238,7 @@ class GalsSharingSession extends DataClass
       championId: data.championId.present
           ? data.championId.value
           : this.championId,
+      lessonId: data.lessonId.present ? data.lessonId.value : this.lessonId,
       occurredAt: data.occurredAt.present
           ? data.occurredAt.value
           : this.occurredAt,
@@ -24117,6 +24252,7 @@ class GalsSharingSession extends DataClass
     return (StringBuffer('GalsSharingSession(')
           ..write('id: $id, ')
           ..write('championId: $championId, ')
+          ..write('lessonId: $lessonId, ')
           ..write('occurredAt: $occurredAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -24126,13 +24262,14 @@ class GalsSharingSession extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(id, championId, occurredAt, createdAt, updatedAt);
+      Object.hash(id, championId, lessonId, occurredAt, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is GalsSharingSession &&
           other.id == this.id &&
           other.championId == this.championId &&
+          other.lessonId == this.lessonId &&
           other.occurredAt == this.occurredAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -24141,6 +24278,7 @@ class GalsSharingSession extends DataClass
 class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
   final Value<String> id;
   final Value<String> championId;
+  final Value<String?> lessonId;
   final Value<String> occurredAt;
   final Value<String> createdAt;
   final Value<String> updatedAt;
@@ -24148,6 +24286,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
   const GalsSharingSessionsCompanion({
     this.id = const Value.absent(),
     this.championId = const Value.absent(),
+    this.lessonId = const Value.absent(),
     this.occurredAt = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -24156,6 +24295,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
   GalsSharingSessionsCompanion.insert({
     required String id,
     required String championId,
+    this.lessonId = const Value.absent(),
     required String occurredAt,
     required String createdAt,
     required String updatedAt,
@@ -24168,6 +24308,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
   static Insertable<GalsSharingSession> custom({
     Expression<String>? id,
     Expression<String>? championId,
+    Expression<String>? lessonId,
     Expression<String>? occurredAt,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
@@ -24176,6 +24317,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (championId != null) 'champion_id': championId,
+      if (lessonId != null) 'lesson_id': lessonId,
       if (occurredAt != null) 'occurred_at': occurredAt,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -24186,6 +24328,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
   GalsSharingSessionsCompanion copyWith({
     Value<String>? id,
     Value<String>? championId,
+    Value<String?>? lessonId,
     Value<String>? occurredAt,
     Value<String>? createdAt,
     Value<String>? updatedAt,
@@ -24194,6 +24337,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
     return GalsSharingSessionsCompanion(
       id: id ?? this.id,
       championId: championId ?? this.championId,
+      lessonId: lessonId ?? this.lessonId,
       occurredAt: occurredAt ?? this.occurredAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -24209,6 +24353,9 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
     }
     if (championId.present) {
       map['champion_id'] = Variable<String>(championId.value);
+    }
+    if (lessonId.present) {
+      map['lesson_id'] = Variable<String>(lessonId.value);
     }
     if (occurredAt.present) {
       map['occurred_at'] = Variable<String>(occurredAt.value);
@@ -24230,6 +24377,7 @@ class GalsSharingSessionsCompanion extends UpdateCompanion<GalsSharingSession> {
     return (StringBuffer('GalsSharingSessionsCompanion(')
           ..write('id: $id, ')
           ..write('championId: $championId, ')
+          ..write('lessonId: $lessonId, ')
           ..write('occurredAt: $occurredAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -25025,6 +25173,1217 @@ class GalsSessionAttendanceCompanion
   }
 }
 
+class $GalsLessonCompletionsTable extends GalsLessonCompletions
+    with TableInfo<$GalsLessonCompletionsTable, GalsLessonCompletion> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalsLessonCompletionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _championIdMeta = const VerificationMeta(
+    'championId',
+  );
+  @override
+  late final GeneratedColumn<String> championId = GeneratedColumn<String>(
+    'champion_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<String> packId = GeneratedColumn<String>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentVersionMeta = const VerificationMeta(
+    'contentVersion',
+  );
+  @override
+  late final GeneratedColumn<String> contentVersion = GeneratedColumn<String>(
+    'content_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lessonIdMeta = const VerificationMeta(
+    'lessonId',
+  );
+  @override
+  late final GeneratedColumn<String> lessonId = GeneratedColumn<String>(
+    'lesson_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reflectionMeta = const VerificationMeta(
+    'reflection',
+  );
+  @override
+  late final GeneratedColumn<String> reflection = GeneratedColumn<String>(
+    'reflection',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<String> completedAt = GeneratedColumn<String>(
+    'completed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    championId,
+    packId,
+    contentVersion,
+    lessonId,
+    reflection,
+    completedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gals_lesson_completions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GalsLessonCompletion> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('champion_id')) {
+      context.handle(
+        _championIdMeta,
+        championId.isAcceptableOrUnknown(data['champion_id']!, _championIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_championIdMeta);
+    }
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packIdMeta);
+    }
+    if (data.containsKey('content_version')) {
+      context.handle(
+        _contentVersionMeta,
+        contentVersion.isAcceptableOrUnknown(
+          data['content_version']!,
+          _contentVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentVersionMeta);
+    }
+    if (data.containsKey('lesson_id')) {
+      context.handle(
+        _lessonIdMeta,
+        lessonId.isAcceptableOrUnknown(data['lesson_id']!, _lessonIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lessonIdMeta);
+    }
+    if (data.containsKey('reflection')) {
+      context.handle(
+        _reflectionMeta,
+        reflection.isAcceptableOrUnknown(data['reflection']!, _reflectionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reflectionMeta);
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_completedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    championId,
+    packId,
+    contentVersion,
+    lessonId,
+  };
+  @override
+  GalsLessonCompletion map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalsLessonCompletion(
+      championId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}champion_id'],
+      )!,
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      contentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_version'],
+      )!,
+      lessonId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lesson_id'],
+      )!,
+      reflection: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reflection'],
+      )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}completed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GalsLessonCompletionsTable createAlias(String alias) {
+    return $GalsLessonCompletionsTable(attachedDatabase, alias);
+  }
+}
+
+class GalsLessonCompletion extends DataClass
+    implements Insertable<GalsLessonCompletion> {
+  final String championId;
+  final String packId;
+  final String contentVersion;
+  final String lessonId;
+  final String reflection;
+  final String completedAt;
+  const GalsLessonCompletion({
+    required this.championId,
+    required this.packId,
+    required this.contentVersion,
+    required this.lessonId,
+    required this.reflection,
+    required this.completedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['champion_id'] = Variable<String>(championId);
+    map['pack_id'] = Variable<String>(packId);
+    map['content_version'] = Variable<String>(contentVersion);
+    map['lesson_id'] = Variable<String>(lessonId);
+    map['reflection'] = Variable<String>(reflection);
+    map['completed_at'] = Variable<String>(completedAt);
+    return map;
+  }
+
+  GalsLessonCompletionsCompanion toCompanion(bool nullToAbsent) {
+    return GalsLessonCompletionsCompanion(
+      championId: Value(championId),
+      packId: Value(packId),
+      contentVersion: Value(contentVersion),
+      lessonId: Value(lessonId),
+      reflection: Value(reflection),
+      completedAt: Value(completedAt),
+    );
+  }
+
+  factory GalsLessonCompletion.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalsLessonCompletion(
+      championId: serializer.fromJson<String>(json['championId']),
+      packId: serializer.fromJson<String>(json['packId']),
+      contentVersion: serializer.fromJson<String>(json['contentVersion']),
+      lessonId: serializer.fromJson<String>(json['lessonId']),
+      reflection: serializer.fromJson<String>(json['reflection']),
+      completedAt: serializer.fromJson<String>(json['completedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'championId': serializer.toJson<String>(championId),
+      'packId': serializer.toJson<String>(packId),
+      'contentVersion': serializer.toJson<String>(contentVersion),
+      'lessonId': serializer.toJson<String>(lessonId),
+      'reflection': serializer.toJson<String>(reflection),
+      'completedAt': serializer.toJson<String>(completedAt),
+    };
+  }
+
+  GalsLessonCompletion copyWith({
+    String? championId,
+    String? packId,
+    String? contentVersion,
+    String? lessonId,
+    String? reflection,
+    String? completedAt,
+  }) => GalsLessonCompletion(
+    championId: championId ?? this.championId,
+    packId: packId ?? this.packId,
+    contentVersion: contentVersion ?? this.contentVersion,
+    lessonId: lessonId ?? this.lessonId,
+    reflection: reflection ?? this.reflection,
+    completedAt: completedAt ?? this.completedAt,
+  );
+  GalsLessonCompletion copyWithCompanion(GalsLessonCompletionsCompanion data) {
+    return GalsLessonCompletion(
+      championId: data.championId.present
+          ? data.championId.value
+          : this.championId,
+      packId: data.packId.present ? data.packId.value : this.packId,
+      contentVersion: data.contentVersion.present
+          ? data.contentVersion.value
+          : this.contentVersion,
+      lessonId: data.lessonId.present ? data.lessonId.value : this.lessonId,
+      reflection: data.reflection.present
+          ? data.reflection.value
+          : this.reflection,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsLessonCompletion(')
+          ..write('championId: $championId, ')
+          ..write('packId: $packId, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('lessonId: $lessonId, ')
+          ..write('reflection: $reflection, ')
+          ..write('completedAt: $completedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    championId,
+    packId,
+    contentVersion,
+    lessonId,
+    reflection,
+    completedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalsLessonCompletion &&
+          other.championId == this.championId &&
+          other.packId == this.packId &&
+          other.contentVersion == this.contentVersion &&
+          other.lessonId == this.lessonId &&
+          other.reflection == this.reflection &&
+          other.completedAt == this.completedAt);
+}
+
+class GalsLessonCompletionsCompanion
+    extends UpdateCompanion<GalsLessonCompletion> {
+  final Value<String> championId;
+  final Value<String> packId;
+  final Value<String> contentVersion;
+  final Value<String> lessonId;
+  final Value<String> reflection;
+  final Value<String> completedAt;
+  final Value<int> rowid;
+  const GalsLessonCompletionsCompanion({
+    this.championId = const Value.absent(),
+    this.packId = const Value.absent(),
+    this.contentVersion = const Value.absent(),
+    this.lessonId = const Value.absent(),
+    this.reflection = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GalsLessonCompletionsCompanion.insert({
+    required String championId,
+    required String packId,
+    required String contentVersion,
+    required String lessonId,
+    required String reflection,
+    required String completedAt,
+    this.rowid = const Value.absent(),
+  }) : championId = Value(championId),
+       packId = Value(packId),
+       contentVersion = Value(contentVersion),
+       lessonId = Value(lessonId),
+       reflection = Value(reflection),
+       completedAt = Value(completedAt);
+  static Insertable<GalsLessonCompletion> custom({
+    Expression<String>? championId,
+    Expression<String>? packId,
+    Expression<String>? contentVersion,
+    Expression<String>? lessonId,
+    Expression<String>? reflection,
+    Expression<String>? completedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (championId != null) 'champion_id': championId,
+      if (packId != null) 'pack_id': packId,
+      if (contentVersion != null) 'content_version': contentVersion,
+      if (lessonId != null) 'lesson_id': lessonId,
+      if (reflection != null) 'reflection': reflection,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GalsLessonCompletionsCompanion copyWith({
+    Value<String>? championId,
+    Value<String>? packId,
+    Value<String>? contentVersion,
+    Value<String>? lessonId,
+    Value<String>? reflection,
+    Value<String>? completedAt,
+    Value<int>? rowid,
+  }) {
+    return GalsLessonCompletionsCompanion(
+      championId: championId ?? this.championId,
+      packId: packId ?? this.packId,
+      contentVersion: contentVersion ?? this.contentVersion,
+      lessonId: lessonId ?? this.lessonId,
+      reflection: reflection ?? this.reflection,
+      completedAt: completedAt ?? this.completedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (championId.present) {
+      map['champion_id'] = Variable<String>(championId.value);
+    }
+    if (packId.present) {
+      map['pack_id'] = Variable<String>(packId.value);
+    }
+    if (contentVersion.present) {
+      map['content_version'] = Variable<String>(contentVersion.value);
+    }
+    if (lessonId.present) {
+      map['lesson_id'] = Variable<String>(lessonId.value);
+    }
+    if (reflection.present) {
+      map['reflection'] = Variable<String>(reflection.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<String>(completedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsLessonCompletionsCompanion(')
+          ..write('championId: $championId, ')
+          ..write('packId: $packId, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('lessonId: $lessonId, ')
+          ..write('reflection: $reflection, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GalsAchievementReviewsTable extends GalsAchievementReviews
+    with TableInfo<$GalsAchievementReviewsTable, GalsAchievementReview> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GalsAchievementReviewsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _championIdMeta = const VerificationMeta(
+    'championId',
+  );
+  @override
+  late final GeneratedColumn<String> championId = GeneratedColumn<String>(
+    'champion_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<String> packId = GeneratedColumn<String>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentVersionMeta = const VerificationMeta(
+    'contentVersion',
+  );
+  @override
+  late final GeneratedColumn<String> contentVersion = GeneratedColumn<String>(
+    'content_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toolIdMeta = const VerificationMeta('toolId');
+  @override
+  late final GeneratedColumn<String> toolId = GeneratedColumn<String>(
+    'tool_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reviewedAtMeta = const VerificationMeta(
+    'reviewedAt',
+  );
+  @override
+  late final GeneratedColumn<String> reviewedAt = GeneratedColumn<String>(
+    'reviewed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _goalMeta = const VerificationMeta('goal');
+  @override
+  late final GeneratedColumn<String> goal = GeneratedColumn<String>(
+    'goal',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _progressMeta = const VerificationMeta(
+    'progress',
+  );
+  @override
+  late final GeneratedColumn<String> progress = GeneratedColumn<String>(
+    'progress',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _enablingFactorsMeta = const VerificationMeta(
+    'enablingFactors',
+  );
+  @override
+  late final GeneratedColumn<String> enablingFactors = GeneratedColumn<String>(
+    'enabling_factors',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _challengesMeta = const VerificationMeta(
+    'challenges',
+  );
+  @override
+  late final GeneratedColumn<String> challenges = GeneratedColumn<String>(
+    'challenges',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nextStepsMeta = const VerificationMeta(
+    'nextSteps',
+  );
+  @override
+  late final GeneratedColumn<String> nextSteps = GeneratedColumn<String>(
+    'next_steps',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    championId,
+    packId,
+    contentVersion,
+    toolId,
+    reviewedAt,
+    goal,
+    progress,
+    enablingFactors,
+    challenges,
+    nextSteps,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gals_achievement_reviews';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GalsAchievementReview> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('champion_id')) {
+      context.handle(
+        _championIdMeta,
+        championId.isAcceptableOrUnknown(data['champion_id']!, _championIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_championIdMeta);
+    }
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packIdMeta);
+    }
+    if (data.containsKey('content_version')) {
+      context.handle(
+        _contentVersionMeta,
+        contentVersion.isAcceptableOrUnknown(
+          data['content_version']!,
+          _contentVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentVersionMeta);
+    }
+    if (data.containsKey('tool_id')) {
+      context.handle(
+        _toolIdMeta,
+        toolId.isAcceptableOrUnknown(data['tool_id']!, _toolIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toolIdMeta);
+    }
+    if (data.containsKey('reviewed_at')) {
+      context.handle(
+        _reviewedAtMeta,
+        reviewedAt.isAcceptableOrUnknown(data['reviewed_at']!, _reviewedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reviewedAtMeta);
+    }
+    if (data.containsKey('goal')) {
+      context.handle(
+        _goalMeta,
+        goal.isAcceptableOrUnknown(data['goal']!, _goalMeta),
+      );
+    }
+    if (data.containsKey('progress')) {
+      context.handle(
+        _progressMeta,
+        progress.isAcceptableOrUnknown(data['progress']!, _progressMeta),
+      );
+    }
+    if (data.containsKey('enabling_factors')) {
+      context.handle(
+        _enablingFactorsMeta,
+        enablingFactors.isAcceptableOrUnknown(
+          data['enabling_factors']!,
+          _enablingFactorsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('challenges')) {
+      context.handle(
+        _challengesMeta,
+        challenges.isAcceptableOrUnknown(data['challenges']!, _challengesMeta),
+      );
+    }
+    if (data.containsKey('next_steps')) {
+      context.handle(
+        _nextStepsMeta,
+        nextSteps.isAcceptableOrUnknown(data['next_steps']!, _nextStepsMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GalsAchievementReview map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GalsAchievementReview(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      championId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}champion_id'],
+      )!,
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      contentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_version'],
+      )!,
+      toolId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tool_id'],
+      )!,
+      reviewedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reviewed_at'],
+      )!,
+      goal: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}goal'],
+      ),
+      progress: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}progress'],
+      ),
+      enablingFactors: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}enabling_factors'],
+      ),
+      challenges: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}challenges'],
+      ),
+      nextSteps: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}next_steps'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GalsAchievementReviewsTable createAlias(String alias) {
+    return $GalsAchievementReviewsTable(attachedDatabase, alias);
+  }
+}
+
+class GalsAchievementReview extends DataClass
+    implements Insertable<GalsAchievementReview> {
+  final String id;
+  final String championId;
+  final String packId;
+  final String contentVersion;
+  final String toolId;
+  final String reviewedAt;
+  final String? goal;
+  final String? progress;
+  final String? enablingFactors;
+  final String? challenges;
+  final String? nextSteps;
+  final String createdAt;
+  final String updatedAt;
+  const GalsAchievementReview({
+    required this.id,
+    required this.championId,
+    required this.packId,
+    required this.contentVersion,
+    required this.toolId,
+    required this.reviewedAt,
+    this.goal,
+    this.progress,
+    this.enablingFactors,
+    this.challenges,
+    this.nextSteps,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['champion_id'] = Variable<String>(championId);
+    map['pack_id'] = Variable<String>(packId);
+    map['content_version'] = Variable<String>(contentVersion);
+    map['tool_id'] = Variable<String>(toolId);
+    map['reviewed_at'] = Variable<String>(reviewedAt);
+    if (!nullToAbsent || goal != null) {
+      map['goal'] = Variable<String>(goal);
+    }
+    if (!nullToAbsent || progress != null) {
+      map['progress'] = Variable<String>(progress);
+    }
+    if (!nullToAbsent || enablingFactors != null) {
+      map['enabling_factors'] = Variable<String>(enablingFactors);
+    }
+    if (!nullToAbsent || challenges != null) {
+      map['challenges'] = Variable<String>(challenges);
+    }
+    if (!nullToAbsent || nextSteps != null) {
+      map['next_steps'] = Variable<String>(nextSteps);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  GalsAchievementReviewsCompanion toCompanion(bool nullToAbsent) {
+    return GalsAchievementReviewsCompanion(
+      id: Value(id),
+      championId: Value(championId),
+      packId: Value(packId),
+      contentVersion: Value(contentVersion),
+      toolId: Value(toolId),
+      reviewedAt: Value(reviewedAt),
+      goal: goal == null && nullToAbsent ? const Value.absent() : Value(goal),
+      progress: progress == null && nullToAbsent
+          ? const Value.absent()
+          : Value(progress),
+      enablingFactors: enablingFactors == null && nullToAbsent
+          ? const Value.absent()
+          : Value(enablingFactors),
+      challenges: challenges == null && nullToAbsent
+          ? const Value.absent()
+          : Value(challenges),
+      nextSteps: nextSteps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextSteps),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory GalsAchievementReview.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GalsAchievementReview(
+      id: serializer.fromJson<String>(json['id']),
+      championId: serializer.fromJson<String>(json['championId']),
+      packId: serializer.fromJson<String>(json['packId']),
+      contentVersion: serializer.fromJson<String>(json['contentVersion']),
+      toolId: serializer.fromJson<String>(json['toolId']),
+      reviewedAt: serializer.fromJson<String>(json['reviewedAt']),
+      goal: serializer.fromJson<String?>(json['goal']),
+      progress: serializer.fromJson<String?>(json['progress']),
+      enablingFactors: serializer.fromJson<String?>(json['enablingFactors']),
+      challenges: serializer.fromJson<String?>(json['challenges']),
+      nextSteps: serializer.fromJson<String?>(json['nextSteps']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'championId': serializer.toJson<String>(championId),
+      'packId': serializer.toJson<String>(packId),
+      'contentVersion': serializer.toJson<String>(contentVersion),
+      'toolId': serializer.toJson<String>(toolId),
+      'reviewedAt': serializer.toJson<String>(reviewedAt),
+      'goal': serializer.toJson<String?>(goal),
+      'progress': serializer.toJson<String?>(progress),
+      'enablingFactors': serializer.toJson<String?>(enablingFactors),
+      'challenges': serializer.toJson<String?>(challenges),
+      'nextSteps': serializer.toJson<String?>(nextSteps),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  GalsAchievementReview copyWith({
+    String? id,
+    String? championId,
+    String? packId,
+    String? contentVersion,
+    String? toolId,
+    String? reviewedAt,
+    Value<String?> goal = const Value.absent(),
+    Value<String?> progress = const Value.absent(),
+    Value<String?> enablingFactors = const Value.absent(),
+    Value<String?> challenges = const Value.absent(),
+    Value<String?> nextSteps = const Value.absent(),
+    String? createdAt,
+    String? updatedAt,
+  }) => GalsAchievementReview(
+    id: id ?? this.id,
+    championId: championId ?? this.championId,
+    packId: packId ?? this.packId,
+    contentVersion: contentVersion ?? this.contentVersion,
+    toolId: toolId ?? this.toolId,
+    reviewedAt: reviewedAt ?? this.reviewedAt,
+    goal: goal.present ? goal.value : this.goal,
+    progress: progress.present ? progress.value : this.progress,
+    enablingFactors: enablingFactors.present
+        ? enablingFactors.value
+        : this.enablingFactors,
+    challenges: challenges.present ? challenges.value : this.challenges,
+    nextSteps: nextSteps.present ? nextSteps.value : this.nextSteps,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  GalsAchievementReview copyWithCompanion(
+    GalsAchievementReviewsCompanion data,
+  ) {
+    return GalsAchievementReview(
+      id: data.id.present ? data.id.value : this.id,
+      championId: data.championId.present
+          ? data.championId.value
+          : this.championId,
+      packId: data.packId.present ? data.packId.value : this.packId,
+      contentVersion: data.contentVersion.present
+          ? data.contentVersion.value
+          : this.contentVersion,
+      toolId: data.toolId.present ? data.toolId.value : this.toolId,
+      reviewedAt: data.reviewedAt.present
+          ? data.reviewedAt.value
+          : this.reviewedAt,
+      goal: data.goal.present ? data.goal.value : this.goal,
+      progress: data.progress.present ? data.progress.value : this.progress,
+      enablingFactors: data.enablingFactors.present
+          ? data.enablingFactors.value
+          : this.enablingFactors,
+      challenges: data.challenges.present
+          ? data.challenges.value
+          : this.challenges,
+      nextSteps: data.nextSteps.present ? data.nextSteps.value : this.nextSteps,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsAchievementReview(')
+          ..write('id: $id, ')
+          ..write('championId: $championId, ')
+          ..write('packId: $packId, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('toolId: $toolId, ')
+          ..write('reviewedAt: $reviewedAt, ')
+          ..write('goal: $goal, ')
+          ..write('progress: $progress, ')
+          ..write('enablingFactors: $enablingFactors, ')
+          ..write('challenges: $challenges, ')
+          ..write('nextSteps: $nextSteps, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    championId,
+    packId,
+    contentVersion,
+    toolId,
+    reviewedAt,
+    goal,
+    progress,
+    enablingFactors,
+    challenges,
+    nextSteps,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GalsAchievementReview &&
+          other.id == this.id &&
+          other.championId == this.championId &&
+          other.packId == this.packId &&
+          other.contentVersion == this.contentVersion &&
+          other.toolId == this.toolId &&
+          other.reviewedAt == this.reviewedAt &&
+          other.goal == this.goal &&
+          other.progress == this.progress &&
+          other.enablingFactors == this.enablingFactors &&
+          other.challenges == this.challenges &&
+          other.nextSteps == this.nextSteps &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class GalsAchievementReviewsCompanion
+    extends UpdateCompanion<GalsAchievementReview> {
+  final Value<String> id;
+  final Value<String> championId;
+  final Value<String> packId;
+  final Value<String> contentVersion;
+  final Value<String> toolId;
+  final Value<String> reviewedAt;
+  final Value<String?> goal;
+  final Value<String?> progress;
+  final Value<String?> enablingFactors;
+  final Value<String?> challenges;
+  final Value<String?> nextSteps;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const GalsAchievementReviewsCompanion({
+    this.id = const Value.absent(),
+    this.championId = const Value.absent(),
+    this.packId = const Value.absent(),
+    this.contentVersion = const Value.absent(),
+    this.toolId = const Value.absent(),
+    this.reviewedAt = const Value.absent(),
+    this.goal = const Value.absent(),
+    this.progress = const Value.absent(),
+    this.enablingFactors = const Value.absent(),
+    this.challenges = const Value.absent(),
+    this.nextSteps = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GalsAchievementReviewsCompanion.insert({
+    required String id,
+    required String championId,
+    required String packId,
+    required String contentVersion,
+    required String toolId,
+    required String reviewedAt,
+    this.goal = const Value.absent(),
+    this.progress = const Value.absent(),
+    this.enablingFactors = const Value.absent(),
+    this.challenges = const Value.absent(),
+    this.nextSteps = const Value.absent(),
+    required String createdAt,
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       championId = Value(championId),
+       packId = Value(packId),
+       contentVersion = Value(contentVersion),
+       toolId = Value(toolId),
+       reviewedAt = Value(reviewedAt),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GalsAchievementReview> custom({
+    Expression<String>? id,
+    Expression<String>? championId,
+    Expression<String>? packId,
+    Expression<String>? contentVersion,
+    Expression<String>? toolId,
+    Expression<String>? reviewedAt,
+    Expression<String>? goal,
+    Expression<String>? progress,
+    Expression<String>? enablingFactors,
+    Expression<String>? challenges,
+    Expression<String>? nextSteps,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (championId != null) 'champion_id': championId,
+      if (packId != null) 'pack_id': packId,
+      if (contentVersion != null) 'content_version': contentVersion,
+      if (toolId != null) 'tool_id': toolId,
+      if (reviewedAt != null) 'reviewed_at': reviewedAt,
+      if (goal != null) 'goal': goal,
+      if (progress != null) 'progress': progress,
+      if (enablingFactors != null) 'enabling_factors': enablingFactors,
+      if (challenges != null) 'challenges': challenges,
+      if (nextSteps != null) 'next_steps': nextSteps,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GalsAchievementReviewsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? championId,
+    Value<String>? packId,
+    Value<String>? contentVersion,
+    Value<String>? toolId,
+    Value<String>? reviewedAt,
+    Value<String?>? goal,
+    Value<String?>? progress,
+    Value<String?>? enablingFactors,
+    Value<String?>? challenges,
+    Value<String?>? nextSteps,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return GalsAchievementReviewsCompanion(
+      id: id ?? this.id,
+      championId: championId ?? this.championId,
+      packId: packId ?? this.packId,
+      contentVersion: contentVersion ?? this.contentVersion,
+      toolId: toolId ?? this.toolId,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
+      goal: goal ?? this.goal,
+      progress: progress ?? this.progress,
+      enablingFactors: enablingFactors ?? this.enablingFactors,
+      challenges: challenges ?? this.challenges,
+      nextSteps: nextSteps ?? this.nextSteps,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (championId.present) {
+      map['champion_id'] = Variable<String>(championId.value);
+    }
+    if (packId.present) {
+      map['pack_id'] = Variable<String>(packId.value);
+    }
+    if (contentVersion.present) {
+      map['content_version'] = Variable<String>(contentVersion.value);
+    }
+    if (toolId.present) {
+      map['tool_id'] = Variable<String>(toolId.value);
+    }
+    if (reviewedAt.present) {
+      map['reviewed_at'] = Variable<String>(reviewedAt.value);
+    }
+    if (goal.present) {
+      map['goal'] = Variable<String>(goal.value);
+    }
+    if (progress.present) {
+      map['progress'] = Variable<String>(progress.value);
+    }
+    if (enablingFactors.present) {
+      map['enabling_factors'] = Variable<String>(enablingFactors.value);
+    }
+    if (challenges.present) {
+      map['challenges'] = Variable<String>(challenges.value);
+    }
+    if (nextSteps.present) {
+      map['next_steps'] = Variable<String>(nextSteps.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GalsAchievementReviewsCompanion(')
+          ..write('id: $id, ')
+          ..write('championId: $championId, ')
+          ..write('packId: $packId, ')
+          ..write('contentVersion: $contentVersion, ')
+          ..write('toolId: $toolId, ')
+          ..write('reviewedAt: $reviewedAt, ')
+          ..write('goal: $goal, ')
+          ..write('progress: $progress, ')
+          ..write('enablingFactors: $enablingFactors, ')
+          ..write('challenges: $challenges, ')
+          ..write('nextSteps: $nextSteps, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$OticDatabase extends GeneratedDatabase {
   _$OticDatabase(QueryExecutor e) : super(e);
   $OticDatabaseManager get managers => $OticDatabaseManager(this);
@@ -25111,6 +26470,10 @@ abstract class _$OticDatabase extends GeneratedDatabase {
   );
   late final $GalsSessionAttendanceTable galsSessionAttendance =
       $GalsSessionAttendanceTable(this);
+  late final $GalsLessonCompletionsTable galsLessonCompletions =
+      $GalsLessonCompletionsTable(this);
+  late final $GalsAchievementReviewsTable galsAchievementReviews =
+      $GalsAchievementReviewsTable(this);
   late final Index idxTopicResourcesLookup = Index(
     'idx_topic_resources_lookup',
     'CREATE INDEX idx_topic_resources_lookup ON topic_resources (subject_id, topic_key)',
@@ -25275,6 +26638,8 @@ abstract class _$OticDatabase extends GeneratedDatabase {
     galsSharingSessions,
     galsSessionTools,
     galsSessionAttendance,
+    galsLessonCompletions,
+    galsAchievementReviews,
     idxTopicResourcesLookup,
     idxTopicResourcesTitle,
     idxCustomSubjectsSubjectId,
@@ -37086,9 +38451,11 @@ typedef $$GalsChampionsTableCreateCompanionBuilder =
     GalsChampionsCompanion Function({
       required String id,
       required String displayName,
+      Value<String?> groupName,
       Value<String?> sex,
       Value<String?> ageBand,
       Value<String?> location,
+      Value<String?> trainingAt,
       required String createdAt,
       required String updatedAt,
       Value<int> rowid,
@@ -37097,9 +38464,11 @@ typedef $$GalsChampionsTableUpdateCompanionBuilder =
     GalsChampionsCompanion Function({
       Value<String> id,
       Value<String> displayName,
+      Value<String?> groupName,
       Value<String?> sex,
       Value<String?> ageBand,
       Value<String?> location,
+      Value<String?> trainingAt,
       Value<String> createdAt,
       Value<String> updatedAt,
       Value<int> rowid,
@@ -37124,6 +38493,11 @@ class $$GalsChampionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get groupName => $composableBuilder(
+    column: $table.groupName,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get sex => $composableBuilder(
     column: $table.sex,
     builder: (column) => ColumnFilters(column),
@@ -37136,6 +38510,11 @@ class $$GalsChampionsTableFilterComposer
 
   ColumnFilters<String> get location => $composableBuilder(
     column: $table.location,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trainingAt => $composableBuilder(
+    column: $table.trainingAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -37169,6 +38548,11 @@ class $$GalsChampionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get groupName => $composableBuilder(
+    column: $table.groupName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get sex => $composableBuilder(
     column: $table.sex,
     builder: (column) => ColumnOrderings(column),
@@ -37181,6 +38565,11 @@ class $$GalsChampionsTableOrderingComposer
 
   ColumnOrderings<String> get location => $composableBuilder(
     column: $table.location,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trainingAt => $composableBuilder(
+    column: $table.trainingAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -37212,6 +38601,9 @@ class $$GalsChampionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get groupName =>
+      $composableBuilder(column: $table.groupName, builder: (column) => column);
+
   GeneratedColumn<String> get sex =>
       $composableBuilder(column: $table.sex, builder: (column) => column);
 
@@ -37220,6 +38612,11 @@ class $$GalsChampionsTableAnnotationComposer
 
   GeneratedColumn<String> get location =>
       $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<String> get trainingAt => $composableBuilder(
+    column: $table.trainingAt,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -37261,18 +38658,22 @@ class $$GalsChampionsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> displayName = const Value.absent(),
+                Value<String?> groupName = const Value.absent(),
                 Value<String?> sex = const Value.absent(),
                 Value<String?> ageBand = const Value.absent(),
                 Value<String?> location = const Value.absent(),
+                Value<String?> trainingAt = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GalsChampionsCompanion(
                 id: id,
                 displayName: displayName,
+                groupName: groupName,
                 sex: sex,
                 ageBand: ageBand,
                 location: location,
+                trainingAt: trainingAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -37281,18 +38682,22 @@ class $$GalsChampionsTableTableManager
               ({
                 required String id,
                 required String displayName,
+                Value<String?> groupName = const Value.absent(),
                 Value<String?> sex = const Value.absent(),
                 Value<String?> ageBand = const Value.absent(),
                 Value<String?> location = const Value.absent(),
+                Value<String?> trainingAt = const Value.absent(),
                 required String createdAt,
                 required String updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => GalsChampionsCompanion.insert(
                 id: id,
                 displayName: displayName,
+                groupName: groupName,
                 sex: sex,
                 ageBand: ageBand,
                 location: location,
+                trainingAt: trainingAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -37326,6 +38731,7 @@ typedef $$GalsSharingSessionsTableCreateCompanionBuilder =
     GalsSharingSessionsCompanion Function({
       required String id,
       required String championId,
+      Value<String?> lessonId,
       required String occurredAt,
       required String createdAt,
       required String updatedAt,
@@ -37335,6 +38741,7 @@ typedef $$GalsSharingSessionsTableUpdateCompanionBuilder =
     GalsSharingSessionsCompanion Function({
       Value<String> id,
       Value<String> championId,
+      Value<String?> lessonId,
       Value<String> occurredAt,
       Value<String> createdAt,
       Value<String> updatedAt,
@@ -37357,6 +38764,11 @@ class $$GalsSharingSessionsTableFilterComposer
 
   ColumnFilters<String> get championId => $composableBuilder(
     column: $table.championId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lessonId => $composableBuilder(
+    column: $table.lessonId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -37395,6 +38807,11 @@ class $$GalsSharingSessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get lessonId => $composableBuilder(
+    column: $table.lessonId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get occurredAt => $composableBuilder(
     column: $table.occurredAt,
     builder: (column) => ColumnOrderings(column),
@@ -37427,6 +38844,9 @@ class $$GalsSharingSessionsTableAnnotationComposer
     column: $table.championId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get lessonId =>
+      $composableBuilder(column: $table.lessonId, builder: (column) => column);
 
   GeneratedColumn<String> get occurredAt => $composableBuilder(
     column: $table.occurredAt,
@@ -37485,6 +38905,7 @@ class $$GalsSharingSessionsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> championId = const Value.absent(),
+                Value<String?> lessonId = const Value.absent(),
                 Value<String> occurredAt = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
@@ -37492,6 +38913,7 @@ class $$GalsSharingSessionsTableTableManager
               }) => GalsSharingSessionsCompanion(
                 id: id,
                 championId: championId,
+                lessonId: lessonId,
                 occurredAt: occurredAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -37501,6 +38923,7 @@ class $$GalsSharingSessionsTableTableManager
               ({
                 required String id,
                 required String championId,
+                Value<String?> lessonId = const Value.absent(),
                 required String occurredAt,
                 required String createdAt,
                 required String updatedAt,
@@ -37508,6 +38931,7 @@ class $$GalsSharingSessionsTableTableManager
               }) => GalsSharingSessionsCompanion.insert(
                 id: id,
                 championId: championId,
+                lessonId: lessonId,
                 occurredAt: occurredAt,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -37988,6 +39412,633 @@ typedef $$GalsSessionAttendanceTableProcessedTableManager =
       GalsSessionAttendanceData,
       PrefetchHooks Function()
     >;
+typedef $$GalsLessonCompletionsTableCreateCompanionBuilder =
+    GalsLessonCompletionsCompanion Function({
+      required String championId,
+      required String packId,
+      required String contentVersion,
+      required String lessonId,
+      required String reflection,
+      required String completedAt,
+      Value<int> rowid,
+    });
+typedef $$GalsLessonCompletionsTableUpdateCompanionBuilder =
+    GalsLessonCompletionsCompanion Function({
+      Value<String> championId,
+      Value<String> packId,
+      Value<String> contentVersion,
+      Value<String> lessonId,
+      Value<String> reflection,
+      Value<String> completedAt,
+      Value<int> rowid,
+    });
+
+class $$GalsLessonCompletionsTableFilterComposer
+    extends Composer<_$OticDatabase, $GalsLessonCompletionsTable> {
+  $$GalsLessonCompletionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lessonId => $composableBuilder(
+    column: $table.lessonId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reflection => $composableBuilder(
+    column: $table.reflection,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GalsLessonCompletionsTableOrderingComposer
+    extends Composer<_$OticDatabase, $GalsLessonCompletionsTable> {
+  $$GalsLessonCompletionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lessonId => $composableBuilder(
+    column: $table.lessonId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reflection => $composableBuilder(
+    column: $table.reflection,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GalsLessonCompletionsTableAnnotationComposer
+    extends Composer<_$OticDatabase, $GalsLessonCompletionsTable> {
+  $$GalsLessonCompletionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lessonId =>
+      $composableBuilder(column: $table.lessonId, builder: (column) => column);
+
+  GeneratedColumn<String> get reflection => $composableBuilder(
+    column: $table.reflection,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$GalsLessonCompletionsTableTableManager
+    extends
+        RootTableManager<
+          _$OticDatabase,
+          $GalsLessonCompletionsTable,
+          GalsLessonCompletion,
+          $$GalsLessonCompletionsTableFilterComposer,
+          $$GalsLessonCompletionsTableOrderingComposer,
+          $$GalsLessonCompletionsTableAnnotationComposer,
+          $$GalsLessonCompletionsTableCreateCompanionBuilder,
+          $$GalsLessonCompletionsTableUpdateCompanionBuilder,
+          (
+            GalsLessonCompletion,
+            BaseReferences<
+              _$OticDatabase,
+              $GalsLessonCompletionsTable,
+              GalsLessonCompletion
+            >,
+          ),
+          GalsLessonCompletion,
+          PrefetchHooks Function()
+        > {
+  $$GalsLessonCompletionsTableTableManager(
+    _$OticDatabase db,
+    $GalsLessonCompletionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GalsLessonCompletionsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$GalsLessonCompletionsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$GalsLessonCompletionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> championId = const Value.absent(),
+                Value<String> packId = const Value.absent(),
+                Value<String> contentVersion = const Value.absent(),
+                Value<String> lessonId = const Value.absent(),
+                Value<String> reflection = const Value.absent(),
+                Value<String> completedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GalsLessonCompletionsCompanion(
+                championId: championId,
+                packId: packId,
+                contentVersion: contentVersion,
+                lessonId: lessonId,
+                reflection: reflection,
+                completedAt: completedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String championId,
+                required String packId,
+                required String contentVersion,
+                required String lessonId,
+                required String reflection,
+                required String completedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => GalsLessonCompletionsCompanion.insert(
+                championId: championId,
+                packId: packId,
+                contentVersion: contentVersion,
+                lessonId: lessonId,
+                reflection: reflection,
+                completedAt: completedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GalsLessonCompletionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OticDatabase,
+      $GalsLessonCompletionsTable,
+      GalsLessonCompletion,
+      $$GalsLessonCompletionsTableFilterComposer,
+      $$GalsLessonCompletionsTableOrderingComposer,
+      $$GalsLessonCompletionsTableAnnotationComposer,
+      $$GalsLessonCompletionsTableCreateCompanionBuilder,
+      $$GalsLessonCompletionsTableUpdateCompanionBuilder,
+      (
+        GalsLessonCompletion,
+        BaseReferences<
+          _$OticDatabase,
+          $GalsLessonCompletionsTable,
+          GalsLessonCompletion
+        >,
+      ),
+      GalsLessonCompletion,
+      PrefetchHooks Function()
+    >;
+typedef $$GalsAchievementReviewsTableCreateCompanionBuilder =
+    GalsAchievementReviewsCompanion Function({
+      required String id,
+      required String championId,
+      required String packId,
+      required String contentVersion,
+      required String toolId,
+      required String reviewedAt,
+      Value<String?> goal,
+      Value<String?> progress,
+      Value<String?> enablingFactors,
+      Value<String?> challenges,
+      Value<String?> nextSteps,
+      required String createdAt,
+      required String updatedAt,
+      Value<int> rowid,
+    });
+typedef $$GalsAchievementReviewsTableUpdateCompanionBuilder =
+    GalsAchievementReviewsCompanion Function({
+      Value<String> id,
+      Value<String> championId,
+      Value<String> packId,
+      Value<String> contentVersion,
+      Value<String> toolId,
+      Value<String> reviewedAt,
+      Value<String?> goal,
+      Value<String?> progress,
+      Value<String?> enablingFactors,
+      Value<String?> challenges,
+      Value<String?> nextSteps,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$GalsAchievementReviewsTableFilterComposer
+    extends Composer<_$OticDatabase, $GalsAchievementReviewsTable> {
+  $$GalsAchievementReviewsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toolId => $composableBuilder(
+    column: $table.toolId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get goal => $composableBuilder(
+    column: $table.goal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get progress => $composableBuilder(
+    column: $table.progress,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get enablingFactors => $composableBuilder(
+    column: $table.enablingFactors,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get challenges => $composableBuilder(
+    column: $table.challenges,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nextSteps => $composableBuilder(
+    column: $table.nextSteps,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GalsAchievementReviewsTableOrderingComposer
+    extends Composer<_$OticDatabase, $GalsAchievementReviewsTable> {
+  $$GalsAchievementReviewsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toolId => $composableBuilder(
+    column: $table.toolId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get goal => $composableBuilder(
+    column: $table.goal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get progress => $composableBuilder(
+    column: $table.progress,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get enablingFactors => $composableBuilder(
+    column: $table.enablingFactors,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get challenges => $composableBuilder(
+    column: $table.challenges,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nextSteps => $composableBuilder(
+    column: $table.nextSteps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GalsAchievementReviewsTableAnnotationComposer
+    extends Composer<_$OticDatabase, $GalsAchievementReviewsTable> {
+  $$GalsAchievementReviewsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get championId => $composableBuilder(
+    column: $table.championId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<String> get contentVersion => $composableBuilder(
+    column: $table.contentVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get toolId =>
+      $composableBuilder(column: $table.toolId, builder: (column) => column);
+
+  GeneratedColumn<String> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get goal =>
+      $composableBuilder(column: $table.goal, builder: (column) => column);
+
+  GeneratedColumn<String> get progress =>
+      $composableBuilder(column: $table.progress, builder: (column) => column);
+
+  GeneratedColumn<String> get enablingFactors => $composableBuilder(
+    column: $table.enablingFactors,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get challenges => $composableBuilder(
+    column: $table.challenges,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nextSteps =>
+      $composableBuilder(column: $table.nextSteps, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$GalsAchievementReviewsTableTableManager
+    extends
+        RootTableManager<
+          _$OticDatabase,
+          $GalsAchievementReviewsTable,
+          GalsAchievementReview,
+          $$GalsAchievementReviewsTableFilterComposer,
+          $$GalsAchievementReviewsTableOrderingComposer,
+          $$GalsAchievementReviewsTableAnnotationComposer,
+          $$GalsAchievementReviewsTableCreateCompanionBuilder,
+          $$GalsAchievementReviewsTableUpdateCompanionBuilder,
+          (
+            GalsAchievementReview,
+            BaseReferences<
+              _$OticDatabase,
+              $GalsAchievementReviewsTable,
+              GalsAchievementReview
+            >,
+          ),
+          GalsAchievementReview,
+          PrefetchHooks Function()
+        > {
+  $$GalsAchievementReviewsTableTableManager(
+    _$OticDatabase db,
+    $GalsAchievementReviewsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GalsAchievementReviewsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$GalsAchievementReviewsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$GalsAchievementReviewsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> championId = const Value.absent(),
+                Value<String> packId = const Value.absent(),
+                Value<String> contentVersion = const Value.absent(),
+                Value<String> toolId = const Value.absent(),
+                Value<String> reviewedAt = const Value.absent(),
+                Value<String?> goal = const Value.absent(),
+                Value<String?> progress = const Value.absent(),
+                Value<String?> enablingFactors = const Value.absent(),
+                Value<String?> challenges = const Value.absent(),
+                Value<String?> nextSteps = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GalsAchievementReviewsCompanion(
+                id: id,
+                championId: championId,
+                packId: packId,
+                contentVersion: contentVersion,
+                toolId: toolId,
+                reviewedAt: reviewedAt,
+                goal: goal,
+                progress: progress,
+                enablingFactors: enablingFactors,
+                challenges: challenges,
+                nextSteps: nextSteps,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String championId,
+                required String packId,
+                required String contentVersion,
+                required String toolId,
+                required String reviewedAt,
+                Value<String?> goal = const Value.absent(),
+                Value<String?> progress = const Value.absent(),
+                Value<String?> enablingFactors = const Value.absent(),
+                Value<String?> challenges = const Value.absent(),
+                Value<String?> nextSteps = const Value.absent(),
+                required String createdAt,
+                required String updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => GalsAchievementReviewsCompanion.insert(
+                id: id,
+                championId: championId,
+                packId: packId,
+                contentVersion: contentVersion,
+                toolId: toolId,
+                reviewedAt: reviewedAt,
+                goal: goal,
+                progress: progress,
+                enablingFactors: enablingFactors,
+                challenges: challenges,
+                nextSteps: nextSteps,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GalsAchievementReviewsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$OticDatabase,
+      $GalsAchievementReviewsTable,
+      GalsAchievementReview,
+      $$GalsAchievementReviewsTableFilterComposer,
+      $$GalsAchievementReviewsTableOrderingComposer,
+      $$GalsAchievementReviewsTableAnnotationComposer,
+      $$GalsAchievementReviewsTableCreateCompanionBuilder,
+      $$GalsAchievementReviewsTableUpdateCompanionBuilder,
+      (
+        GalsAchievementReview,
+        BaseReferences<
+          _$OticDatabase,
+          $GalsAchievementReviewsTable,
+          GalsAchievementReview
+        >,
+      ),
+      GalsAchievementReview,
+      PrefetchHooks Function()
+    >;
 
 class $OticDatabaseManager {
   final _$OticDatabase _db;
@@ -38096,4 +40147,11 @@ class $OticDatabaseManager {
       $$GalsSessionToolsTableTableManager(_db, _db.galsSessionTools);
   $$GalsSessionAttendanceTableTableManager get galsSessionAttendance =>
       $$GalsSessionAttendanceTableTableManager(_db, _db.galsSessionAttendance);
+  $$GalsLessonCompletionsTableTableManager get galsLessonCompletions =>
+      $$GalsLessonCompletionsTableTableManager(_db, _db.galsLessonCompletions);
+  $$GalsAchievementReviewsTableTableManager get galsAchievementReviews =>
+      $$GalsAchievementReviewsTableTableManager(
+        _db,
+        _db.galsAchievementReviews,
+      );
 }

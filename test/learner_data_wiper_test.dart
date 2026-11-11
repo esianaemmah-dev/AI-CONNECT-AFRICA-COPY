@@ -487,6 +487,13 @@ void main() {
   test('every table in the schema is classified as either wiped or kept — '
       'a newly-added table must be sorted into one on purpose', () async {
     const kept = {
+      // Community champions are independent of school learner profiles.
+      'gals_champions',
+      'gals_sharing_sessions',
+      'gals_session_tools',
+      'gals_session_attendance',
+      'gals_lesson_completions',
+      'gals_achievement_reviews',
       'topic_resources',
       'custom_subjects',
       // Built-in subjects the Admin removed: the school's, not a learner's.

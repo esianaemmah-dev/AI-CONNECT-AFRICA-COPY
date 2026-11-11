@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "active": "assets/gals/packs/gals-foundation-v3.json",
+  "packs": [
+    "assets/gals/packs/gals-foundation-v1.json",
+    "assets/gals/packs/gals-foundation-v2.json",
+    "assets/gals/packs/gals-foundation-v3.json"
+  ]
+}
